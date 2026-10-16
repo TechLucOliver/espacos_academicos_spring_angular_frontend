@@ -123,9 +123,23 @@ import { AuthService } from '../core/services/auth.service';
                   </ul>
                 </div>
 
-                <button type="submit" class="btn btn-primary w-100" [disabled]="loading">
-                  <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span> Salvar IES
+                <div class="d-flex gap-2">
+                <button type="button"
+                        class="btn btn-primary flex-grow-1"
+                        (click)="salvarIes()"
+                        [disabled]="loading">
+                  <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+                  <i class="bi" [ngClass]="editandoIesId ? 'bi-check2-circle' : 'bi-plus-circle'"></i>
+                  {{ editandoIesId ? ' Atualizar IES' : ' Salvar IES' }}
                 </button>
+
+                <button *ngIf="editandoIesId"
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        (click)="cancelarEdicaoIes()">
+                  Cancelar
+                </button>
+              </div>
               </form>
             </div>
           </div>
@@ -138,23 +152,47 @@ import { AuthService } from '../core/services/auth.service';
               <button class="btn btn-sm btn-outline-secondary" (click)="carregarIes()"><i class="bi bi-arrow-clockwise"></i></button>
             </div>
             <div class="table-responsive">
-              <table class="table table-hover align-middle mb-0">
-                <thead class="table-light small">
+              <table class="table table-hover align-middle mb-0 small">
+                <thead class="table-light">
                   <tr>
                     <th>Sigla</th>
                     <th>Nome</th>
                     <th>E-mail</th>
                     <th>Reitor</th>
                     <th>Status</th>
+                    <th class="text-center" style="width: 110px;">Ações</th>
                   </tr>
                 </thead>
-                <tbody class="small">
-                  <tr *ngFor="let item of listaIes">
-                    <td><span class="badge bg-secondary">{{ item.sigla }}</span></td>
-                    <td class="fw-semibold">{{ item.nome }}</td>
-                    <td>{{ item.emailCentral || item.email }}</td>
-                    <td>{{ item.nomeReitor || item.reitor || 'Não informado' }}</td>
-                    <td><span class="badge bg-success">{{ item.status || 'ATIVO' }}</span></td>
+                <tbody>
+                  <tr *ngFor="let ies of listaIes">
+                    <td><span class="badge bg-light text-dark border">{{ ies.sigla }}</span></td>
+                    <td class="fw-semibold">{{ ies.nome }}</td>
+                    <td>{{ ies.emailCentral || ies.email }}</td>
+                    <td>{{ ies.nomeReitor || ies.reitor || '-' }}</td>
+                    <td>
+                      <span class="badge" [ngClass]="ies.status === 'ATIVO' ? 'bg-success' : 'bg-secondary'">
+                        {{ ies.status || 'ATIVO' }}
+                      </span>
+                    </td>
+                    <td class="text-center">
+                      <!-- Botão Editar (RF 2.1) -->
+                      <button class="btn btn-outline-primary btn-sm me-1 py-0 px-2"
+                              title="Editar IES"
+                              (click)="editarIes(ies)">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+
+                      <!-- Botão Inativar / Ativar (RF 2.1.2) -->
+                      <button class="btn btn-sm py-0 px-2"
+                              [ngClass]="ies.status === 'ATIVO' ? 'btn-outline-danger' : 'btn-outline-success'"
+                              [title]="ies.status === 'ATIVO' ? 'Inativar IES' : 'Ativar IES'"
+                              (click)="alternarStatusIes(ies)">
+                        <i class="bi" [ngClass]="ies.status === 'ATIVO' ? 'bi-slash-circle' : 'bi-arrow-counterclockwise'"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="listaIes.length === 0">
+                    <td colspan="6" class="text-center text-muted py-3">Nenhuma instituição registada.</td>
                   </tr>
                 </tbody>
               </table>
@@ -771,6 +809,7 @@ export class CadastrosComponent implements OnInit {
   listaUsuarios: any[] = [];
   listaSoftwares: any[] = [];
   listaLogs: any[] = [];
+  editandoIesId: number | null = null;
 
   formIes = {
     sigla: '',
@@ -868,16 +907,33 @@ export class CadastrosComponent implements OnInit {
     this.mensagemSucesso = '';
     this.mensagemErro = '';
 
-    this.http.post(`${this.baseUrl}/ies`, this.formIes).subscribe({
+    const payload = {
+      sigla: this.formIes.sigla,
+      nome: this.formIes.nome,
+      emailCentral: this.formIes.emailCentral,
+      telefoneCentral: this.formIes.telefoneCentral,
+      nomeReitor: this.formIes.nomeReitor,
+      proReitorias: this.formIes.proReitorias,
+      status: 'ATIVO'
+    };
+
+    const req$ = this.editandoIesId
+      ? this.http.put(`${this.baseUrl}/ies/${this.editandoIesId}`, payload)
+      : this.http.post(`${this.baseUrl}/ies`, payload);
+
+    req$.subscribe({
       next: () => {
         this.loading = false;
-        this.mensagemSucesso = 'IES registada com sucesso!';
-        this.formIes = { sigla: '', nome: '', emailCentral: '', telefoneCentral: '', nomeReitor: '', proReitorias: [] };
+        this.mensagemSucesso = this.editandoIesId
+          ? 'IES atualizada com sucesso!'
+          : 'IES registada com sucesso!';
+        this.cancelarEdicaoIes();
         this.carregarIes();
+        this.carregarLogs();
       },
       error: (err: any) => {
         this.loading = false;
-        this.mensagemErro = err.error?.message || err.error?.mensagem || 'Erro ao registar IES.';
+        this.mensagemErro = err?.error?.message || err?.error?.mensagem || 'Erro ao processar IES.';
       }
     });
   }
@@ -894,6 +950,59 @@ export class CadastrosComponent implements OnInit {
 
   removerProReitoria(index: number): void {
     this.formIes.proReitorias.splice(index, 1);
+  }
+
+  alternarStatusIes(ies: any): void {
+    const inativando = ies.status === 'ATIVO';
+    const acao = inativando ? 'inativar' : 'reativar';
+    const confirmacao = confirm(`Deseja realmente ${acao} a IES "${ies.sigla}"?`);
+    if (!confirmacao) return;
+
+    this.loading = true;
+    this.mensagemSucesso = '';
+    this.mensagemErro = '';
+
+    // Dispara /api/ies/{id}/inativar ou /api/ies/{id}/reativar
+    const endpoint = `${this.baseUrl}/ies/${ies.id}/${acao}`;
+
+    this.http.patch(endpoint, {}).subscribe({
+      next: () => {
+        this.loading = false;
+        this.mensagemSucesso = `IES ${ies.sigla} ${inativando ? 'inativada' : 'reativada'} com sucesso!`;
+        this.carregarIes();
+        this.carregarLogs();
+      },
+      error: (err: any) => {
+        this.loading = false;
+        this.mensagemErro = err?.error?.message || `Erro ao ${acao} a IES.`;
+      }
+    });
+  }
+
+  editarIes(ies: any): void {
+    this.editandoIesId = ies.id;
+    this.formIes = {
+      sigla: ies.sigla || '',
+      nome: ies.nome || '',
+      emailCentral: ies.emailCentral || ies.email || '',
+      telefoneCentral: ies.telefoneCentral || ies.telefone || '',
+      nomeReitor: ies.nomeReitor || ies.reitor || '',
+      proReitorias: ies.proReitorias ? [...ies.proReitorias] : []
+    };
+    this.mensagemSucesso = '';
+    this.mensagemErro = '';
+  }
+
+  cancelarEdicaoIes(): void {
+    this.editandoIesId = null;
+    this.formIes = {
+      sigla: '',
+      nome: '',
+      emailCentral: '',
+      telefoneCentral: '',
+      nomeReitor: '',
+      proReitorias: []
+    };
   }
 
   // --- CENTROS ACADÉMICOS ---
