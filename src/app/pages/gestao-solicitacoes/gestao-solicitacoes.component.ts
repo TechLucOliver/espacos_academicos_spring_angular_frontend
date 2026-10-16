@@ -10,32 +10,36 @@ import { AuthService } from '../../core/services/auth.service';
   imports: [CommonModule, FormsModule],
   template: `
     <div class="card shadow-sm border-0">
-      <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-clock-history me-1 text-primary"></i>Fila de Solicitações de Reserva de Espaço</span>
-        <button class="btn btn-outline-primary btn-sm" (click)="carregarSolicitacoes()">
-          <i class="bi bi-arrow-clockwise me-1"></i>Atualizar
-        </button>
+      <div class="card-header bg-white py-3">
+        <ul class="nav nav-tabs card-header-tabs">
+          <li class="nav-item">
+            <button class="nav-link fw-bold" [class.active]="abaAtiva === 'ESPACOS'" (click)="trocarAba('ESPACOS')">
+              <i class="bi bi-door-open me-1 text-primary"></i> Reservas de Espaços
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link fw-bold" [class.active]="abaAtiva === 'SOFTWARES'" (click)="trocarAba('SOFTWARES')">
+              <i class="bi bi-cpu me-1 text-primary"></i> Moderação de Softwares (RF 8)
+            </button>
+          </li>
+        </ul>
       </div>
 
       <div *ngIf="alerta" class="alert m-3 py-2 small" [ngClass]="alertaSucesso ? 'alert-success' : 'alert-danger'">
         {{ alerta }}
       </div>
 
-      <div class="card-body p-0">
+      <!-- ================= ABA 1: RESERVAS DE ESPAÇOS ================= -->
+      <div *ngIf="abaAtiva === 'ESPACOS'" class="card-body p-0">
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0">
             <thead class="table-light small">
               <tr>
-                <th>ID</th>
-                <th>Espaço</th>
-                <th>Solicitante</th>
-                <th>Data & Horário</th>
-                <th>Status</th>
-                <th class="text-end">Ações de Gestão</th>
+                <th>ID</th><th>Espaço</th><th>Solicitante</th><th>Data & Horário</th><th>Status</th><th class="text-end">Ações</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let s of solicitacoes">
+              <tr *ngFor="let s of solicitacoesEspacos">
                 <td>#{{ s.id }}</td>
                 <td class="fw-semibold">{{ s.espacoNome || s.espaco?.nome }}</td>
                 <td>
@@ -52,63 +56,82 @@ import { AuthService } from '../../core/services/auth.service';
                   }">{{ s.status }}</span>
                 </td>
                 <td class="text-end">
-                  <!-- ESTADO PENDENTE: Regras de Moderação e Autor -->
+                  <!-- PENDENTE -->
                   <ng-container *ngIf="s.status === 'PENDENTE'">
-                    <!-- 1. Superusuário ADMIN: tem poder irrestrito para aprovar/reprovar qualquer solicitação (mesmo a dele) -->
-                    <div class="btn-group btn-group-sm" *ngIf="auth.hasRole('ADMINISTRADOR')">
-                      <button class="btn btn-success" (click)="aprovar(s.id)" title="Aprovar Reserva">
-                        <i class="bi bi-check-lg"></i> Aprovar
-                      </button>
-                      <button class="btn btn-danger" (click)="abrirReprovacao(s.id)" title="Reprovar com Justificativa">
-                        <i class="bi bi-x-lg"></i> Reprovar
-                      </button>
+                    <div class="btn-group btn-group-sm" *ngIf="auth.hasRole('ADMINISTRADOR') || (!isMinhaSolicitacao(s) && auth.hasRole('COLABORADOR'))">
+                      <button class="btn btn-success" (click)="aprovarEspaco(s.id)"><i class="bi bi-check-lg"></i> Aprovar</button>
+                      <button class="btn btn-danger" (click)="reprovarEspaco(s.id)"><i class="bi bi-x-lg"></i> Reprovar</button>
                     </div>
-
-                    <!-- 1. Se pertence ao próprio utilizador logado: apenas aguarda moderação -->
-                    <span *ngIf="isMinhaSolicitacao(s) && !auth.hasRole('ADMINISTRADOR')"
-                          class="badge bg-light text-muted border py-2 px-3">
+                    <span *ngIf="isMinhaSolicitacao(s) && !auth.hasRole('ADMINISTRADOR')" class="badge bg-light text-muted border py-2 px-3">
                       <i class="bi bi-hourglass-split me-1"></i> Aguardando moderação
-                    </span>
-
-                    <!-- 2. Se pertence a outro docente e quem está logado é COLABORADOR ou ADMIN: exibe aprovação/reprovação -->
-                    <div class="btn-group btn-group-sm" *ngIf="!isMinhaSolicitacao(s) && !auth.hasRole('ADMINISTRADOR') && auth.hasRole('COLABORADOR')">
-                      <button class="btn btn-success" (click)="aprovar(s.id)" title="Aprovar Reserva">
-                        <i class="bi bi-check-lg"></i> Aprovar
-                      </button>
-                      <button class="btn btn-danger" (click)="abrirReprovacao(s.id)" title="Reprovar com Justificativa">
-                        <i class="bi bi-x-lg"></i> Reprovar
-                      </button>
-                    </div>
-
-                    <!-- 3. Se for um docente regular (apenas USUARIO) vendo pedido de outro docente: não tem ações de moderação -->
-                    <span *ngIf="!isMinhaSolicitacao(s) && !auth.hasRole('ADMINISTRADOR') && !auth.hasRole('COLABORADOR')"
-                          class="text-muted small">
-                      Em análise
                     </span>
                   </ng-container>
 
-                  <!-- ESTADO APROVADA: Liberação de Espaço (RF 10.4) -->
+                  <!-- APROVADA (RF 10.4: Somente o solicitante libera) -->
                   <ng-container *ngIf="s.status === 'APROVADA'">
-                    <!-- O próprio solicitante que usou o espaço (ou o Admin) pode confirmar a liberação -->
-                    <button *ngIf="isMinhaSolicitacao(s)"class="btn btn-outline-primary btn-sm" (click)="finalizarUso(s.id)"
-                      title="Confirmar término do uso e liberar o espaço físico (RF 10.4)">
+                    <button *ngIf="isMinhaSolicitacao(s)" class="btn btn-outline-primary btn-sm" (click)="finalizarUsoEspaco(s.id)">
                       <i class="bi bi-box-arrow-down-left me-1"></i> Liberar Espaço
                     </button>
-
-                  <!-- Qualquer terceiro (incluindo o Administrador) visualiza apenas o estado de ocupação -->
                     <span *ngIf="!isMinhaSolicitacao(s)" class="badge bg-light text-secondary border py-2 px-3">
                       <i class="bi bi-lock me-1"></i> Em uso / Reservado
                     </span>
                   </ng-container>
 
-                  <!-- ESTADO REPROVADA OU FINALIZADA -->
-                  <span *ngIf="s.status === 'REPROVADA' || s.status === 'FINALIZADA'" class="text-muted small">
-                    Concluído
-                  </span>
+                  <span *ngIf="s.status === 'REPROVADA' || s.status === 'FINALIZADA'" class="text-muted small">Concluído</span>
                 </td>
               </tr>
-              <tr *ngIf="solicitacoes.length === 0">
-                <td colspan="6" class="text-center text-muted py-4">Nenhuma solicitação registrada no momento.</td>
+              <tr *ngIf="solicitacoesEspacos.length === 0">
+                <td colspan="6" class="text-center text-muted py-4">Nenhuma solicitação de espaço registrada.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ================= ABA 2: MODERAÇÃO DE SOFTWARES (RF 8) ================= -->
+      <div *ngIf="abaAtiva === 'SOFTWARES'" class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light small">
+              <tr>
+                <th>ID</th><th>Laboratório</th><th>Software Solicitado</th><th>Solicitante</th><th>Disciplina</th><th>Data Limite</th><th>Status</th><th class="text-end">Ações de Gestão</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let sw of solicitacoesSoftwares">
+                <td>#{{ sw.id }}</td>
+                <td class="fw-semibold">{{ sw.laboratorioNome || sw.laboratorio?.nome }}</td>
+                <td>{{ sw.softwareNome || sw.software?.nome }}</td>
+                <td>
+                  {{ sw.solicitanteNome || sw.solicitante?.nomeCompleto }}
+                  <span *ngIf="isMinhaSolicitacao(sw)" class="badge bg-secondary-subtle text-secondary border ms-1">Você</span>
+                </td>
+                <td>{{ sw.disciplina || '-' }}</td>
+                <td>{{ sw.dataLimiteNecessidade }}</td>
+                <td>
+                  <span class="badge" [ngClass]="{
+                    'bg-warning text-dark': sw.status === 'PENDENTE',
+                    'bg-success': sw.status === 'APROVADA',
+                    'bg-danger': sw.status === 'REPROVADA'
+                  }">{{ sw.status }}</span>
+                </td>
+                <td class="text-end">
+                  <div class="btn-group btn-group-sm" *ngIf="sw.status === 'PENDENTE' && (auth.hasRole('ADMINISTRADOR') || (!isMinhaSolicitacao(sw) && auth.hasRole('COLABORADOR')))">
+                    <button class="btn btn-success" (click)="aprovarSoftware(sw.id)" title="Aprovar Instalação (RF 8.1)">
+                      <i class="bi bi-check-lg"></i> Aprovar
+                    </button>
+                    <button class="btn btn-danger" (click)="reprovarSoftware(sw.id)" title="Reprovar com Justificativa (RF 8.2)">
+                      <i class="bi bi-x-lg"></i> Reprovar
+                    </button>
+                  </div>
+                  <span *ngIf="sw.status === 'PENDENTE' && isMinhaSolicitacao(sw) && !auth.hasRole('ADMINISTRADOR')" class="badge bg-light text-muted border py-2 px-3">
+                    <i class="bi bi-hourglass-split me-1"></i> Aguardando moderação
+                  </span>
+                  <span *ngIf="sw.status !== 'PENDENTE'" class="text-muted small">Concluído</span>
+                </td>
+              </tr>
+              <tr *ngIf="solicitacoesSoftwares.length === 0">
+                <td colspan="8" class="text-center text-muted py-4">Nenhuma solicitação de instalação de software registrada.</td>
               </tr>
             </tbody>
           </table>
@@ -121,7 +144,9 @@ export class GestaoSolicitacoesComponent implements OnInit {
   private http = inject(HttpClient);
   auth = inject(AuthService);
 
-  solicitacoes: any[] = [];
+  abaAtiva: 'ESPACOS' | 'SOFTWARES' = 'ESPACOS';
+  solicitacoesEspacos: any[] = [];
+  solicitacoesSoftwares: any[] = [];
   alerta = '';
   alertaSucesso = true;
 
@@ -129,11 +154,23 @@ export class GestaoSolicitacoesComponent implements OnInit {
     this.carregarSolicitacoes();
   }
 
+  trocarAba(aba: 'ESPACOS' | 'SOFTWARES') {
+    this.abaAtiva = aba;
+    this.carregarSolicitacoes();
+  }
+
   carregarSolicitacoes() {
-    this.http.get<any[]>('http://localhost:8080/api/solicitacoes-reservas').subscribe({
-      next: (data) => this.solicitacoes = data,
-      error: () => this.exibirAlerta('Erro ao carregar solicitações.', false)
-    });
+    if (this.abaAtiva === 'ESPACOS') {
+      this.http.get<any[]>('http://localhost:8080/api/solicitacoes-reservas').subscribe({
+        next: (data) => this.solicitacoesEspacos = data,
+        error: () => this.exibirAlerta('Erro ao carregar reservas de espaço.', false)
+      });
+    } else {
+      this.http.get<any[]>('http://localhost:8080/api/solicitacoes-softwares').subscribe({
+        next: (data) => this.solicitacoesSoftwares = data,
+        error: () => this.exibirAlerta('Erro ao carregar solicitações de software.', false)
+      });
+    }
   }
 
   isMinhaSolicitacao(s: any): boolean {
@@ -141,33 +178,24 @@ export class GestaoSolicitacoesComponent implements OnInit {
     const userEmail = this.auth.getUserLogin();
     const userNome = this.auth.getUserNome();
 
-    if (userId && (s.solicitanteId === userId || s.solicitante?.id === userId)) {
-      return true;
-    }
-    if (userEmail && (s.solicitanteEmail === userEmail || s.solicitante?.email === userEmail)) {
-      return true;
-    }
-    if (userNome && (s.solicitanteNome === userNome || s.solicitante?.nomeCompleto === userNome)) {
-      return true;
-    }
-
+    if (userId && (s.solicitanteId === userId || s.solicitante?.id === userId)) return true;
+    if (userEmail && (s.solicitanteEmail === userEmail || s.solicitante?.email === userEmail)) return true;
+    if (userNome && (s.solicitanteNome === userNome || s.solicitante?.nomeCompleto === userNome)) return true;
     return false;
   }
 
-  aprovar(id: number) {
+  aprovarEspaco(id: number) {
     const avaliadorId = this.auth.getUserId();
     this.http.patch(`http://localhost:8080/api/solicitacoes-reservas/${id}/aprovar?avaliadorId=${avaliadorId}`, {}).subscribe({
       next: () => {
         this.exibirAlerta('Reserva aprovada com sucesso! O espaço tornou-se INDISPONÍVEL.', true);
         this.carregarSolicitacoes();
       },
-      error: (err) => {
-        this.exibirAlerta(this.extrairMensagemErro(err, 'Erro ao aprovar solicitação.'), false);
-      }
+      error: (err) => this.exibirAlerta(err.error?.message || 'Erro ao aprovar espaço.', false)
     });
   }
 
-  abrirReprovacao(id: number) {
+  reprovarEspaco(id: number) {
     const motivo = prompt('Informe a justificativa da reprovação:');
     if (!motivo) return;
 
@@ -177,38 +205,49 @@ export class GestaoSolicitacoesComponent implements OnInit {
       motivo: motivo
     }).subscribe({
       next: () => {
-        this.exibirAlerta('Solicitação reprovada com justificativa.', true);
+        this.exibirAlerta('Solicitação de reserva reprovada com justificativa.', true);
         this.carregarSolicitacoes();
       },
-      error: (err) => {
-        this.exibirAlerta(this.extrairMensagemErro(err, 'Erro ao reprovar solicitação.'), false);
-      }
+      error: (err) => this.exibirAlerta(err.error?.message || 'Erro ao reprovar reserva.', false)
     });
   }
 
-  finalizarUso(id: number) {
+  finalizarUsoEspaco(id: number) {
     this.http.patch(`http://localhost:8080/api/solicitacoes-reservas/${id}/finalizar`, {}).subscribe({
       next: () => {
-        this.exibirAlerta('Uso finalizado! O espaço retornou automaticamente para DISPONÍVEL (RF 10.4).', true);
+        this.exibirAlerta('Uso finalizado! O espaço retornou para DISPONÍVEL (RF 10.4).', true);
         this.carregarSolicitacoes();
       },
-      error: (err) => {
-        this.exibirAlerta(this.extrairMensagemErro(err, 'Erro ao finalizar uso.'), false);
-      }
+      error: (err) => this.exibirAlerta(err.error?.message || 'Erro ao finalizar uso.', false)
     });
   }
 
-  private extrairMensagemErro(err: any, fallback: string): string {
-    if (!err) return fallback;
-    if (typeof err.error === 'string') {
-      try {
-        const parsed = JSON.parse(err.error);
-        return parsed.message || parsed.mensagem || err.error;
-      } catch {
-        return err.error;
-      }
-    }
-    return err.error?.message || err.error?.mensagem || fallback;
+  aprovarSoftware(id: number) {
+    const avaliadorId = this.auth.getUserId();
+    this.http.patch(`http://localhost:8080/api/solicitacoes-softwares/${id}/aprovar?avaliadorId=${avaliadorId}`, {}).subscribe({
+      next: () => {
+        this.exibirAlerta('Instalação de software aprovada com sucesso (RF 8.1)!', true);
+        this.carregarSolicitacoes();
+      },
+      error: (err) => this.exibirAlerta(err.error?.message || 'Erro ao aprovar instalação de software.', false)
+    });
+  }
+
+  reprovarSoftware(id: number) {
+    const motivo = prompt('Informe a justificativa técnica para a reprovação da instalação (RF 8.2):');
+    if (!motivo) return;
+
+    const avaliadorId = this.auth.getUserId();
+    this.http.patch(`http://localhost:8080/api/solicitacoes-softwares/${id}/reprovar`, {
+      avaliadorId: avaliadorId,
+      motivo: motivo
+    }).subscribe({
+      next: () => {
+        this.exibirAlerta('Instalação de software reprovada com justificativa técnica registrada.', true);
+        this.carregarSolicitacoes();
+      },
+      error: (err) => this.exibirAlerta(err.error?.message || 'Erro ao reprovar software.', false)
+    });
   }
 
   private exibirAlerta(msg: string, sucesso: boolean) {

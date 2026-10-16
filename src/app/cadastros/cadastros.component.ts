@@ -529,16 +529,24 @@ import { AuthService } from '../core/services/auth.service';
                     <i class="bi bi-shield-lock me-1"></i> Perfis de Acesso (RBAC)
                   </label>
                   <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" id="checkColab" [checked]="temPerfil('COLABORADOR')" (change)="togglePerfil('COLABORADOR')">
-                    <label class="form-check-label small" for="checkColab">COLABORADOR</label>
+                      <input class="form-check-input" type="checkbox" id="chkColaborador"
+                          [checked]="temPerfil('COLABORADOR')"
+                          (change)="togglePerfil('COLABORADOR')">
+                    <label class="form-check-label small" for="chkColaborador">COLABORADOR</label>
                   </div>
+
                   <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" id="checkUser" [checked]="temPerfil('USUARIO')" (change)="togglePerfil('USUARIO')">
-                    <label class="form-check-label small" for="checkUser">USUARIO</label>
+                    <input class="form-check-input" type="checkbox" id="chkUsuario"
+                          [checked]="temPerfil('USUARIO')"
+                          (change)="togglePerfil('USUARIO')">
+                    <label class="form-check-label small" for="chkUsuario">USUARIO</label>
                   </div>
+
                   <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" id="checkAdmin" [checked]="temPerfil('ADMINISTRADOR')" (change)="togglePerfil('ADMINISTRADOR')">
-                    <label class="form-check-label small" for="checkAdmin">ADMINISTRADOR</label>
+                    <input class="form-check-input" type="checkbox" id="chkAdmin"
+                          [checked]="temPerfil('ADMINISTRADOR')"
+                          (change)="togglePerfil('ADMINISTRADOR')">
+                    <label class="form-check-label small" for="chkAdmin">ADMINISTRADOR</label>
                   </div>
                 </div>
 
@@ -743,7 +751,7 @@ export class CadastrosComponent implements OnInit {
     telefone: '',
     senha: '',
     centroAcademicoId: null as number | null,
-    perfis: ['COLABORADOR'] as string[]
+    perfis: [] as string[]
   };
 
   formSoftware = {
@@ -990,9 +998,7 @@ export class CadastrosComponent implements OnInit {
   togglePerfil(perfil: string): void {
     const idx = this.formUsuario.perfis.indexOf(perfil);
     if (idx > -1) {
-      if (this.formUsuario.perfis.length > 1) {
-        this.formUsuario.perfis.splice(idx, 1);
-      }
+      this.formUsuario.perfis.splice(idx, 1); // Remove normalmente sem restrição de tamanho
     } else {
       this.formUsuario.perfis.push(perfil);
     }
@@ -1033,7 +1039,7 @@ export class CadastrosComponent implements OnInit {
           telefone: '',
           senha: '',
           centroAcademicoId: null,
-          perfis: ['COLABORADOR']
+          perfis: []
         };
         this.carregarUsuarios();
       },

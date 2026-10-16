@@ -10,7 +10,7 @@ import { AuthService } from '../../../core/services/auth.service';
   template: `
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm mb-4" *ngIf="authService.isAuthenticated()">
       <div class="container">
-        <a class="navbar-brand fw-bold" routerLink="/reservas">
+        <a class="navbar-brand fw-bold" routerLink="/reservar">
           <i class="bi bi-building-check me-2"></i>Controle de Espaços
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
@@ -18,27 +18,35 @@ import { AuthService } from '../../../core/services/auth.service';
         </button>
         <div class="collapse navbar-collapse" id="navMenu">
           <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-            <li class="nav-item">
+            <!-- Solicitar Reserva: Exclusivo para perfis que podem abrir pedidos (USUARIO e ADMINISTRADOR) -->
+            <li class="nav-item" *ngIf="authService.hasRole('USUARIO') || authService.hasRole('ADMINISTRADOR')">
               <a class="nav-link" routerLink="/reservar" routerLinkActive="active">
                 <i class="bi bi-calendar-plus me-1"></i>Solicitar Reserva
               </a>
             </li>
+
+            <!-- Fila de Moderação: Exclusivo para moderadores (COLABORADOR e ADMINISTRADOR) -->
             <li class="nav-item" *ngIf="authService.hasRole('COLABORADOR') || authService.hasRole('ADMINISTRADOR')">
               <a class="nav-link" routerLink="/gestao-solicitacoes" routerLinkActive="active">
                 <i class="bi bi-card-checklist me-1"></i>Aprovações & Uso
               </a>
             </li>
+
+            <!-- Relatórios Oficiais: Acesso comum a todos os perfis autenticados -->
             <li class="nav-item">
               <a class="nav-link" routerLink="/relatorios" routerLinkActive="active">
                 <i class="bi bi-file-earmark-bar-graph me-1"></i>Relatórios
               </a>
             </li>
+
+            <!-- Gestão Estrutural: Exclusivo para ADMINISTRADOR -->
             <li class="nav-item" *ngIf="authService.hasRole('ADMINISTRADOR')">
               <a class="nav-link" routerLink="/cadastros" routerLinkActive="active">
                 <i class="bi bi-diagram-3 me-1"></i> Estrutura & Cadastros
               </a>
             </li>
           </ul>
+
           <div class="d-flex align-items-center text-white">
             <span class="badge bg-light text-primary me-3 p-2">
               <i class="bi bi-person-circle me-1"></i>{{ authService.getUserLogin() }}
