@@ -47,6 +47,14 @@ import { AuthService } from '../core/services/auth.service';
             <i class="bi bi-terminal me-1"></i> 7. Softwares & Licenças
           </button>
         </li>
+        <li class="nav-item">
+          <button class="nav-link"
+              [class.active]="abaAtiva === 'logs'"
+              (click)="abaAtiva = 'logs'; carregarLogs()">
+            <i class="bi bi-journal-text me-1"></i> 8. Logs de Auditoria (RF 4)
+          </button>
+        </li>
+
       </ul>
 
       <!-- Mensagens de Alerta -->
@@ -676,12 +684,81 @@ import { AuthService } from '../core/services/auth.service';
           </div>
         </div>
       </div>
+            <!-- ================= ABA 8: LOGS DE AUDITORIA (RF 4) ================= -->
+      <div *ngIf="abaAtiva === 'logs'" class="card shadow-sm border-0">
+        <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
+          <span>
+            <i class="bi bi-shield-check me-1 text-primary"></i>
+            Monitorização de Logs de Auditoria e Rastreabilidade (RF 4)
+          </span>
+          <button class="btn btn-outline-primary btn-sm" (click)="carregarLogs()">
+            <i class="bi bi-arrow-clockwise me-1"></i> Atualizar
+          </button>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light small">
+                <tr>
+                  <th>ID</th>
+                  <th>Data & Horário</th>
+                  <th>Responsável / Utilizador</th>
+                  <th>Ação Realizada</th>
+                  <th>Detalhes / Recurso</th>
+                </tr>
+              </thead>
+                <tbody class="small">
+          <tr *ngFor="let log of listaLogs">
+            <td class="fw-bold">#{{ log.id }}</td>
+
+            <!-- 1. Data e Horário Formatados -->
+            <td>{{ log.dataHora | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+
+            <!-- 2. Responsável e Matrícula -->
+            <td>
+              <span class="fw-semibold">{{ log.usuarioNome || 'Sistema' }}</span>
+              <span *ngIf="log.matricula" class="badge bg-light text-secondary border ms-1">
+                {{ log.matricula }}
+              </span>
+            </td>
+
+            <!-- 3. Ação Colorida e Nítida (Verde, Azul, Amarelo ou Vermelho) -->
+            <td>
+              <span class="badge py-1 px-2" [ngClass]="{
+                'bg-success text-white': log.acao?.includes('CADAST') || log.acao?.includes('CRIAR'),
+                'bg-primary text-white': log.acao?.includes('APROV') || log.acao?.includes('FINALIZ'),
+                'bg-warning text-dark': log.acao?.includes('EDIT') || log.acao?.includes('ATUALIZ'),
+                'bg-danger text-white': log.acao?.includes('REPROV') || log.acao?.includes('INATIV'),
+                'bg-secondary text-white': !log.acao?.includes('CADAST') && !log.acao?.includes('APROV') && !log.acao?.includes('REPROV')
+              }">
+                {{ log.acao }}
+              </span>
+            </td>
+
+            <!-- 4. Entidade / Recurso Afetado (Pega direto o campo 'entidade' do JSON) -->
+            <td>
+              <span class="badge bg-light text-dark border">
+                <i class="bi bi-box me-1 text-primary"></i>{{ log.entidade }}
+              </span>
+            </td>
+          </tr>
+
+          <tr *ngIf="listaLogs.length === 0">
+            <td colspan="5" class="text-center text-muted py-4">
+              Nenhum registo de auditoria encontrado.
+            </td>
+          </tr>
+        </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
 
     </div>
   `
 })
 export class CadastrosComponent implements OnInit {
-  abaAtiva: 'ies' | 'ca' | 'curso' | 'espaco' | 'lab' | 'usuario' | 'software' = 'ies';
+  abaAtiva: 'ies' | 'ca' | 'curso' | 'espaco' | 'lab' | 'usuario' | 'software' | 'logs' = 'ies';
   loading = false;
   mensagemSucesso = '';
   mensagemErro = '';
@@ -693,6 +770,7 @@ export class CadastrosComponent implements OnInit {
   listaLabs: any[] = [];
   listaUsuarios: any[] = [];
   listaSoftwares: any[] = [];
+  listaLogs: any[] = [];
 
   formIes = {
     sigla: '',
@@ -774,6 +852,7 @@ export class CadastrosComponent implements OnInit {
     this.carregarLaboratorios();
     this.carregarUsuarios();
     this.carregarSoftwares();
+    this.carregarLogs();
   }
 
   // --- IES ---
@@ -1081,5 +1160,26 @@ export class CadastrosComponent implements OnInit {
         this.mensagemErro = err.error?.message || err.error?.mensagem || 'Erro ao registar Software.';
       }
     });
+  }
+
+  carregarLogs(): void {
+    this.http.get<any[]>(`${this.baseUrl}/logs`).subscribe({
+      next: (res) => {
+        this.listaLogs = res;
+      },
+      error: (err) => {
+        console.error('Erro ao carregar logs de auditoria:', err);
+      }
+    });
+  }
+
+  getBadgeClass(acao: string): string {
+    if (!acao) return 'bg-secondary text-white';
+    const a = acao.toUpperCase();
+    if (a.includes('CADAST') || a.includes('CRIAR') || a.includes('INSER')) return 'bg-success text-white';
+    if (a.includes('APROV') || a.includes('FINALIZ')) return 'bg-primary text-white';
+    if (a.includes('EDIT') || a.includes('ATUALIZ')) return 'bg-warning text-dark';
+    if (a.includes('REPROV') || a.includes('INATIV') || a.includes('CANCEL') || a.includes('EXCLU')) return 'bg-danger text-white';
+    return 'bg-secondary text-white';
   }
 }
