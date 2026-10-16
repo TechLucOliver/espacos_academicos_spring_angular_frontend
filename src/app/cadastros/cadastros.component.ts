@@ -235,9 +235,23 @@ import { AuthService } from '../core/services/auth.service';
                   <label class="form-label small fw-semibold">Nome do Coordenador</label>
                   <input type="text" class="form-control" [(ngModel)]="formCentro.nomeCoordenador" name="nomeCoordenador" placeholder="Nome do Coordenador" required>
                 </div>
-                <button type="submit" class="btn btn-primary w-100" [disabled]="loading">
-                  <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span> Salvar Centro Académico
+                <div class="d-flex gap-2 mt-3">
+                <button type="button"
+                        class="btn btn-primary flex-grow-1"
+                        (click)="salvarCentro()"
+                        [disabled]="loading">
+                  <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+                  <i class="bi" [ngClass]="editandoCaId ? 'bi-check2-circle' : 'bi-plus-circle'"></i>
+                  {{ editandoCaId ? ' Atualizar CA' : ' Salvar CA' }}
                 </button>
+
+                <button *ngIf="editandoCaId"
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        (click)="cancelarEdicaoCa()">
+                  Cancelar
+                </button>
+              </div>
               </form>
             </div>
           </div>
@@ -250,21 +264,49 @@ import { AuthService } from '../core/services/auth.service';
               <button class="btn btn-sm btn-outline-secondary" (click)="carregarCentros()"><i class="bi bi-arrow-clockwise"></i></button>
             </div>
             <div class="table-responsive">
-              <table class="table table-hover align-middle mb-0">
-                <thead class="table-light small">
+              <table class="table table-hover align-middle mb-0 small">
+                <thead class="table-light">
                   <tr>
-                    <th>Centro / Escola</th>
+                    <th>Nome do CA</th>
                     <th>Coordenador</th>
-                    <th>Contacto</th>
+                    <th>IES Vinculada</th>
                     <th>Status</th>
+                    <th class="text-center" style="width: 110px;">Ações</th>
                   </tr>
                 </thead>
-                <tbody class="small">
+                <tbody>
                   <tr *ngFor="let ca of listaCentros">
                     <td class="fw-semibold">{{ ca.nome }}</td>
-                    <td>{{ ca.nomeCoordenador || ca.coordenador || 'Não informado' }}</td>
-                    <td>{{ ca.emailCentral || ca.email }}</td>
-                    <td><span class="badge bg-success">{{ ca.status || 'ATIVO' }}</span></td>
+                    <td>{{ ca.nomeCoordenador || ca.coordenador || '-' }}</td>
+                    <td>
+                      <span class="badge bg-light text-dark border">
+                        {{ ca.iesSigla || ca.ies?.sigla || 'UCSAL' }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge" [ngClass]="ca.status === 'ATIVO' ? 'bg-success' : 'bg-secondary'">
+                        {{ ca.status || 'ATIVO' }}
+                      </span>
+                    </td>
+                    <td class="text-center">
+                      <!-- Editar CA -->
+                      <button class="btn btn-outline-primary btn-sm me-1 py-0 px-2"
+                              title="Editar CA"
+                              (click)="editarCa(ca)">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+
+                      <!-- Inativar / Reativar CA -->
+                      <button class="btn btn-sm py-0 px-2"
+                              [ngClass]="ca.status === 'ATIVO' ? 'btn-outline-danger' : 'btn-outline-success'"
+                              [title]="ca.status === 'ATIVO' ? 'Inativar CA' : 'Ativar CA'"
+                              (click)="alternarStatusCurso(ca)">
+                        <i class="bi" [ngClass]="ca.status === 'ATIVO' ? 'bi-slash-circle' : 'bi-arrow-counterclockwise'"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="listaCentros.length === 0">
+                    <td colspan="5" class="text-center text-muted py-3">Nenhum Centro Académico registado.</td>
                   </tr>
                 </tbody>
               </table>
@@ -312,9 +354,23 @@ import { AuthService } from '../core/services/auth.service';
                   <label class="form-label small fw-semibold">Coordenador do Curso</label>
                   <input type="text" class="form-control" [(ngModel)]="formCurso.nomeCoordenador" name="coordCurso" placeholder="Nome do coordenador" required>
                 </div>
-                <button type="submit" class="btn btn-primary w-100" [disabled]="loading">
-                  <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span> Salvar Curso
+                <div class="d-flex gap-2 mt-3">
+                <button type="button"
+                        class="btn btn-primary flex-grow-1"
+                        (click)="salvarCurso()"
+                        [disabled]="loading">
+                  <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+                  <i class="bi" [ngClass]="editandoCursoId ? 'bi-check2-circle' : 'bi-plus-circle'"></i>
+                  {{ editandoCursoId ? ' Atualizar Curso' : ' Salvar Curso' }}
                 </button>
+
+                <button *ngIf="editandoCursoId"
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        (click)="cancelarEdicaoCurso()">
+                  Cancelar
+                </button>
+              </div>
               </form>
             </div>
           </div>
@@ -327,23 +383,47 @@ import { AuthService } from '../core/services/auth.service';
               <button class="btn btn-sm btn-outline-secondary" (click)="carregarCursos()"><i class="bi bi-arrow-clockwise"></i></button>
             </div>
             <div class="table-responsive">
-              <table class="table table-hover align-middle mb-0">
-                <thead class="table-light small">
+              <table class="table table-hover align-middle mb-0 small">
+                <thead class="table-light">
                   <tr>
                     <th>Sigla</th>
-                    <th>Curso</th>
+                    <th>Descrição do Curso</th>
                     <th>Turno</th>
-                    <th>Coordenador</th>
+                    <th>CA Pertencente</th>
                     <th>Status</th>
+                    <th class="text-center" style="width: 110px;">Ações</th>
                   </tr>
                 </thead>
-                <tbody class="small">
+                <tbody>
                   <tr *ngFor="let c of listaCursos">
-                    <td><span class="badge bg-secondary">{{ c.sigla }}</span></td>
+                    <td><span class="badge bg-light text-dark border">{{ c.sigla }}</span></td>
                     <td class="fw-semibold">{{ c.descricao || c.nome }}</td>
-                    <td><span class="badge bg-light text-dark border">{{ c.turno }}</span></td>
-                    <td>{{ c.nomeCoordenador || 'Não informado' }}</td>
-                    <td><span class="badge bg-success">{{ c.status || 'ATIVO' }}</span></td>
+                    <td>{{ c.turno || '-' }}</td>
+                    <td>{{ c.centroAcademicoNome || c.centroAcademico?.nome || '-' }}</td>
+                    <td>
+                      <span class="badge" [ngClass]="c.status === 'ATIVO' ? 'bg-success' : 'bg-secondary'">
+                        {{ c.status || 'ATIVO' }}
+                      </span>
+                    </td>
+                    <td class="text-center">
+                      <!-- Editar Curso -->
+                      <button class="btn btn-outline-primary btn-sm me-1 py-0 px-2"
+                              title="Editar Curso"
+                              (click)="editarCurso(c)">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+
+                      <!-- Inativar / Reativar Curso -->
+                      <button class="btn btn-sm py-0 px-2"
+                              [ngClass]="c.status === 'ATIVO' ? 'btn-outline-danger' : 'btn-outline-success'"
+                              [title]="c.status === 'ATIVO' ? 'Inativar Curso' : 'Ativar Curso'"
+                              (click)="alternarStatusCurso(c)">
+                        <i class="bi" [ngClass]="c.status === 'ATIVO' ? 'bi-slash-circle' : 'bi-arrow-counterclockwise'"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="listaCursos.length === 0">
+                    <td colspan="6" class="text-center text-muted py-3">Nenhum curso registado.</td>
                   </tr>
                 </tbody>
               </table>
@@ -810,6 +890,8 @@ export class CadastrosComponent implements OnInit {
   listaSoftwares: any[] = [];
   listaLogs: any[] = [];
   editandoIesId: number | null = null;
+  editandoCaId: number | null = null;
+  editandoCursoId: number | null = null;
 
   formIes = {
     sigla: '',
@@ -1014,25 +1096,86 @@ export class CadastrosComponent implements OnInit {
   }
 
   salvarCentro(): void {
-    if (!this.formCentro.iesId) {
-      this.mensagemErro = 'Selecione obrigatoriamente a IES vinculada.';
-      return;
-    }
+    this.loading = true;
+    this.mensagemSucesso = '';
+    this.mensagemErro = '';
+
+    const payload = {
+      iesId: this.formCentro.iesId ? Number(this.formCentro.iesId) : null,
+      nome: this.formCentro.nome,
+      emailCentral: this.formCentro.emailCentral,
+      telefoneCentral: this.formCentro.telefoneCentral,
+      nomeCoordenador: this.formCentro.nomeCoordenador,
+      status: 'ATIVO'
+    };
+
+    const req$ = this.editandoCaId
+      ? this.http.put(`${this.baseUrl}/centros-academicos/${this.editandoCaId}`, payload)
+      : this.http.post(`${this.baseUrl}/centros-academicos`, payload);
+
+    req$.subscribe({
+      next: () => {
+        this.loading = false;
+        this.mensagemSucesso = this.editandoCaId
+          ? 'Centro Académico atualizado com sucesso!'
+          : 'Centro Académico registado com sucesso!';
+        this.cancelarEdicaoCa();
+        this.carregarCentros();
+        this.carregarLogs();
+      },
+      error: (err: any) => {
+        this.loading = false;
+        this.mensagemErro = err?.error?.message || err?.error?.mensagem || 'Erro ao processar Centro Académico.';
+      }
+    });
+  }
+
+  editarCa(ca: any): void {
+    this.editandoCaId = ca.id;
+    this.formCentro = {
+      nome: ca.nome || '',
+      emailCentral: ca.emailCentral || ca.email || '',
+      telefoneCentral: ca.telefoneCentral || ca.telefone || '',
+      nomeCoordenador: ca.nomeCoordenador || ca.coordenador || '',
+      iesId: ca.iesId || ca.ies?.id || ''
+    };
+    this.mensagemSucesso = '';
+    this.mensagemErro = '';
+  }
+
+  cancelarEdicaoCa(): void {
+    this.editandoCaId = null;
+    this.formCentro = {
+      iesId: null,
+      nome: '',
+      emailCentral: '',
+      telefoneCentral: '',
+      nomeCoordenador: ''
+    };
+  }
+
+  alternarStatusCurso(ca: any): void {
+    const inativando = ca.status === 'ATIVO';
+    const acao = inativando ? 'inativar' : 'reativar';
+    const confirmacao = confirm(`Deseja realmente ${acao} o CA "${ca.nome}"?`);
+    if (!confirmacao) return;
 
     this.loading = true;
     this.mensagemSucesso = '';
     this.mensagemErro = '';
 
-    this.http.post(`${this.baseUrl}/centros-academicos`, this.formCentro).subscribe({
+    const endpoint = `${this.baseUrl}/centros-academicos/${ca.id}/${acao}`;
+
+    this.http.patch(endpoint, {}).subscribe({
       next: () => {
         this.loading = false;
-        this.mensagemSucesso = 'Centro Académico registado com sucesso!';
-        this.formCentro = { iesId: null, nome: '', emailCentral: '', telefoneCentral: '', nomeCoordenador: '' };
+        this.mensagemSucesso = `Centro Académico "${ca.nome}" ${inativando ? 'inativado' : 'reativado'} com sucesso!`;
         this.carregarCentros();
+        this.carregarLogs();
       },
       error: (err: any) => {
         this.loading = false;
-        this.mensagemErro = err.error?.message || err.error?.mensagem || 'Erro ao registar Centro Académico.';
+        this.mensagemErro = err?.error?.message || `Erro ao ${acao} o Centro Académico.`;
       }
     });
   }
@@ -1045,32 +1188,61 @@ export class CadastrosComponent implements OnInit {
     });
   }
 
-  salvarCurso(): void {
-    if (!this.formCurso.centroAcademicoId) {
-      this.mensagemErro = 'Selecione o Centro Académico.';
-      return;
-    }
+  editarCurso(curso: any): void {
+    this.editandoCursoId = curso.id;
+    this.formCurso = {
+      centroAcademicoId: curso.centroAcademicoId ? Number(curso.centroAcademicoId) : (curso.centroAcademico?.id ? Number(curso.centroAcademico.id) : null),
+      sigla: curso.sigla || '',
+      descricao: curso.descricao || curso.nome || '',
+      turno: curso.turno || (Array.isArray(curso.turnos) ? curso.turnos[0] : '') || '',
+      nomeCoordenador: curso.nomeCoordenador || curso.coordenadorCurso || curso.coordenador || ''
+    };
+    this.mensagemSucesso = '';
+    this.mensagemErro = '';
+  }
 
+  cancelarEdicaoCurso(): void {
+    this.editandoCursoId = null;
+    this.formCurso = {
+      centroAcademicoId: null,
+      sigla: '',
+      descricao: '',
+      turno: '',
+      nomeCoordenador: ''
+    };
+  }
+
+  salvarCurso(): void {
     this.loading = true;
     this.mensagemSucesso = '';
     this.mensagemErro = '';
 
-    this.http.post(`${this.baseUrl}/cursos`, this.formCurso).subscribe({
+    const payload = {
+      centroAcademicoId: this.formCurso.centroAcademicoId ? Number(this.formCurso.centroAcademicoId) : null,
+      sigla: this.formCurso.sigla,
+      descricao: this.formCurso.descricao,
+      turno: this.formCurso.turno,
+      nomeCoordenador: this.formCurso.nomeCoordenador,
+      status: 'ATIVO'
+    };
+
+    const req$ = this.editandoCursoId
+      ? this.http.put(`${this.baseUrl}/cursos/${this.editandoCursoId}`, payload)
+      : this.http.post(`${this.baseUrl}/cursos`, payload);
+
+    req$.subscribe({
       next: () => {
         this.loading = false;
-        this.mensagemSucesso = 'Curso registado com sucesso!';
-        this.formCurso = {
-          centroAcademicoId: null,
-          sigla: '',
-          descricao: '',
-          turno: 'MATUTINO',
-          nomeCoordenador: ''
-        };
+        this.mensagemSucesso = this.editandoCursoId
+          ? 'Curso atualizado com sucesso!'
+          : 'Curso registado com sucesso!';
+        this.cancelarEdicaoCurso();
         this.carregarCursos();
+        this.carregarLogs();
       },
       error: (err: any) => {
         this.loading = false;
-        this.mensagemErro = err.error?.message || err.error?.mensagem || 'Erro ao registar Curso.';
+        this.mensagemErro = err?.error?.message || err?.error?.mensagem || 'Erro ao processar Curso.';
       }
     });
   }
