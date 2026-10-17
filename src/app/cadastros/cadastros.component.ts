@@ -645,9 +645,18 @@ import { AuthService } from '../core/services/auth.service';
                   <label class="form-label small fw-semibold">E-mail Institucional</label>
                   <input type="email" class="form-control" [(ngModel)]="formUsuario.email" name="emailUser" placeholder="carlos.souza@ies.br" required>
                 </div>
-                <div class="mb-3">
+                <div class="mb-3" *ngIf="!editandoUsuarioId">
                   <label class="form-label small fw-semibold">Palavra-passe Inicial</label>
-                  <input type="password" class="form-control" [(ngModel)]="formUsuario.senha" name="senhaUser" placeholder="Mínimo de 6 caracteres" required>
+                  <input type="password"
+                        class="form-control"
+                        [(ngModel)]="formUsuario.senha"
+                        name="senhaUser"
+                        placeholder="Mínimo de 6 caracteres">
+                </div>
+
+                <div class="alert alert-secondary small py-2 mb-3" *ngIf="editandoUsuarioId">
+                  <i class="bi bi-shield-lock me-1"></i>
+                  Por segurança, a palavra-passe não pode ser alterada pelo Administrador. A redefinição é reservada ao próprio utilizador.
                 </div>
 
                 <div class="border rounded p-2 bg-light mb-3">
@@ -676,9 +685,22 @@ import { AuthService } from '../core/services/auth.service';
                   </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary w-100" [disabled]="loading">
-                  <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span> Salvar Utilizador
+                <div class="d-flex gap-2">
+                <button type="submit"
+                        class="btn btn-primary flex-grow-1"
+                        [disabled]="loading">
+                  <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+                  <i class="bi" [ngClass]="editandoUsuarioId ? 'bi-check2-circle' : 'bi-person-plus'"></i>
+                  {{ editandoUsuarioId ? ' Atualizar Docente' : ' Salvar Utilizador' }}
                 </button>
+
+                <button *ngIf="editandoUsuarioId"
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        (click)="cancelarEdicaoUsuario()">
+                  Cancelar
+                </button>
+              </div>
               </form>
             </div>
           </div>
@@ -699,6 +721,7 @@ import { AuthService } from '../core/services/auth.service';
                     <th>E-mail</th>
                     <th>Perfis</th>
                     <th>Status</th>
+                    <th class="text-center" style="width: 100px;">Ações</th>
                   </tr>
                 </thead>
                 <tbody class="small">
@@ -710,6 +733,24 @@ import { AuthService } from '../core/services/auth.service';
                       <span *ngFor="let p of u.perfis" class="badge bg-light text-primary border me-1">{{ p }}</span>
                     </td>
                     <td><span class="badge bg-success">{{ u.status || 'ATIVO' }}</span></td>
+                    <td class="text-center">
+                      <!-- Botão Editar Docente -->
+                      <button type="button"
+                              class="btn btn-outline-primary btn-sm me-1 py-0 px-2"
+                              title="Editar Docente"
+                              (click)="editarUsuario(u)">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+
+                      <!-- Botão Inativar / Reativar Docente -->
+                      <button type="button"
+                              class="btn btn-sm py-0 px-2"
+                              [ngClass]="u.status === 'ATIVO' ? 'btn-outline-danger' : 'btn-outline-success'"
+                              [title]="u.status === 'ATIVO' ? 'Inativar Docente' : 'Ativar Docente'"
+                              (click)="alternarStatusUsuario(u)">
+                        <i class="bi" [ngClass]="u.status === 'ATIVO' ? 'bi-slash-circle' : 'bi-arrow-counterclockwise'"></i>
+                      </button>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -892,6 +933,7 @@ export class CadastrosComponent implements OnInit {
   editandoIesId: number | null = null;
   editandoCaId: number | null = null;
   editandoCursoId: number | null = null;
+  editandoUsuarioId: number | null = null;
 
   formIes = {
     sigla: '',
@@ -1394,50 +1436,119 @@ export class CadastrosComponent implements OnInit {
   }
 
   salvarUsuario(): void {
-    if (!this.formUsuario.centroAcademicoId) {
-      this.mensagemErro = 'Selecione o Centro Académico ao qual o utilizador/docente pertence.';
-      return;
+    this.loading = true;
+    this.mensagemSucesso = '';
+    this.mensagemErro = '';
+
+    const payload: any = {
+      matricula: this.formUsuario.matricula,
+      nomeCompleto: this.formUsuario.nomeCompleto,
+      email: this.formUsuario.email,
+      telefone: this.formUsuario.telefone,
+      centroAcademicoId: this.formUsuario.centroAcademicoId ? Number(this.formUsuario.centroAcademicoId) : null,
+      perfis: this.formUsuario.perfis
+    };
+
+    // Apenas inclui a senha ao criar novo docente
+    if (!this.editandoUsuarioId) {
+      payload.senha = this.formUsuario.senha;
     }
-    if (this.formUsuario.perfis.length === 0) {
-      this.mensagemErro = 'Selecione pelo menos um perfil de acesso.';
-      return;
+
+    const req$ = this.editandoUsuarioId
+      ? this.http.put(`${this.baseUrl}/usuarios/${this.editandoUsuarioId}`, payload)
+      : this.http.post(`${this.baseUrl}/usuarios`, payload);
+
+    req$.subscribe({
+      next: () => {
+        this.loading = false;
+        this.mensagemSucesso = this.editandoUsuarioId
+          ? 'Docente atualizado com sucesso!'
+          : 'Docente registado com sucesso!';
+        this.cancelarEdicaoUsuario();
+        this.carregarUsuarios();
+        this.carregarLogs();
+      },
+      error: (err: any) => {
+        this.loading = false;
+        this.mensagemErro = err?.error?.message || err?.error?.mensagem || 'Erro ao processar Docente.';
+      }
+    });
+  }
+
+  editarUsuario(user: any): void {
+    this.editandoUsuarioId = user.id;
+    this.formUsuario = {
+      matricula: user.matricula || '',
+      nomeCompleto: user.nomeCompleto || user.nome || '',
+      email: user.email || '',
+      telefone: user.telefone || '',
+      senha: '', // Não preenche a senha ao editar, para segurança
+      centroAcademicoId: user.centroAcademicoId ? Number(user.centroAcademicoId) : (user.centroAcademico?.id ? Number(user.centroAcademico.id) : null),
+      perfis: user.perfis ? [...user.perfis] : ['USUARIO']
+    };
+    this.mensagemSucesso = '';
+    this.mensagemErro = '';
+  }
+
+  cancelarEdicaoUsuario(): void {
+    this.editandoUsuarioId = null;
+    this.formUsuario = {
+      matricula: '',
+      nomeCompleto: '',
+      email: '',
+      telefone: '',
+      senha: '',
+      centroAcademicoId: null,
+      perfis: ['USUARIO']
+    };
+  }
+
+  alternarStatusUsuario(user: any): void {
+    const inativando = user.status === 'ATIVO';
+    const acao = inativando ? 'inativar' : 'reativar';
+    const nomeDocente = user.nomeCompleto || user.nome || user.matricula;
+
+    let motivo = '';
+    if (inativando) {
+      const inputMotivo = prompt(
+        `Informe o motivo da inativação do docente "${nomeDocente}":\n(Ex: Afastamento, Suspensão, Licença Médica)`,
+        'Afastamento contratual'
+      );
+      if (!inputMotivo || inputMotivo.trim().length === 0) {
+        alert('A inativação exige um motivo obrigatório para a auditoria.');
+        return;
+      }
+      motivo = inputMotivo.trim();
+    } else {
+      const confirmacao = confirm(`Deseja realmente reativar o docente "${nomeDocente}"?`);
+      if (!confirmacao) return;
     }
 
     this.loading = true;
     this.mensagemSucesso = '';
     this.mensagemErro = '';
 
-    const payload = {
-      matricula: this.formUsuario.matricula,
-      nomeCompleto: this.formUsuario.nomeCompleto,
-      email: this.formUsuario.email,
-      telefone: this.formUsuario.telefone,
-      senha: this.formUsuario.senha,
-      centroAcademicoId: Number(this.formUsuario.centroAcademicoId),
-      perfis: this.formUsuario.perfis
-    };
+    const endpoint = `${this.baseUrl}/usuarios/${user.id}/${acao}`;
 
-    this.http.post(`${this.baseUrl}/usuarios`, payload).subscribe({
+    // Envia o JSON com a chave "motivo" exigida pelo InativarUsuarioRequestDTO
+    const req$ = inativando
+      ? this.http.patch(endpoint, { motivo: motivo })
+      : this.http.patch(endpoint, {});
+
+    req$.subscribe({
       next: () => {
         this.loading = false;
-        this.mensagemSucesso = 'Utilizador registado com sucesso!';
-        this.formUsuario = {
-          matricula: '',
-          nomeCompleto: '',
-          email: '',
-          telefone: '',
-          senha: '',
-          centroAcademicoId: null,
-          perfis: []
-        };
+        this.mensagemSucesso = `Docente "${nomeDocente}" ${inativando ? 'inativado' : 'reativado'} com sucesso!`;
         this.carregarUsuarios();
+        this.carregarLogs();
       },
       error: (err: any) => {
         this.loading = false;
-        this.mensagemErro = err.error?.message || err.error?.mensagem || 'Erro ao registar Utilizador.';
+        this.mensagemErro = err?.error?.message || err?.error?.mensagem || `Erro ao ${acao} o Docente.`;
       }
     });
   }
+
 
   // --- SOFTWARES & LICENÇAS ---
   carregarSoftwares(): void {
