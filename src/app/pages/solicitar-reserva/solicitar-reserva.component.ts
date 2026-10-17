@@ -33,73 +33,148 @@ import { AuthService } from '../../core/services/auth.service';
       {{ alerta }}
     </div>
 
-    <!-- ================= ABA 1: RESERVA DE ESPAÇOS ================= -->
-    <div *ngIf="abaAtiva === 'ESPACO'" class="row">
-      <div class="col-lg-5 mb-4">
-        <div class="card shadow-sm border-0">
-          <div class="card-header bg-white fw-bold py-3 text-primary">
-            <i class="bi bi-send me-1"></i> Nova Solicitação de Espaço
+    <!-- =============== ABA 1: RESERVA DE ESPAÇOS =============== -->
+      <div *ngIf="abaAtiva === 'ESPACO'" class="row">
+        <!-- COLUNA ESQUERDA: FORMULÁRIO DE PEDIDO -->
+        <div class="col-lg-5 mb-4">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-white fw-bold py-3 text-primary">
+              <i class="bi bi-send me-1"></i> Nova Solicitação de Espaço
+            </div>
+            <div class="card-body">
+              <form (ngSubmit)="enviarReservaEspaco()">
+                <!-- SELETOR DE ESPAÇO -->
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold">Espaço Especial (Laboratórios & Auditórios)</label>
+                  <select class="form-select" [(ngModel)]="reserva.espacoId" name="espacoId" required>
+                    <option [ngValue]="null">Selecione o espaço sob demanda...</option>
+                    <option *ngFor="let espaco of espacosReservaveis" [ngValue]="espaco.id">
+                      [{{ espaco.tipo }}] {{ espaco.sigla }} - {{ espaco.nome }} ({{ espaco.capacidadeMaxima }} lugares)
+                    </option>
+                  </select>
+                </div>
+
+                <!-- DATA DE UTILIZAÇÃO -->
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold">Data de Utilização</label>
+                  <input type="date" class="form-control" [(ngModel)]="reserva.dataUtilizacao" name="data" required>
+                </div>
+
+                <!-- ATALHOS RÁPIDOS DE TURNOS ACADÊMICOS -->
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold text-muted d-block mb-1">
+                    <i class="bi bi-lightning-charge-fill text-warning me-1"></i>Atalhos Rápidos de Aulas:
+                  </label>
+                  <div class="d-flex flex-wrap gap-1">
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" (click)="definirHorario('07:30', '09:10')">07:30 - 09:10</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" (click)="definirHorario('09:20', '11:00')">09:20 - 11:00</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" (click)="definirHorario('13:30', '17:00')">13:30 - 17:00</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" (click)="definirHorario('18:40', '22:10')">18:40 - 22:10</button>
+                  </div>
+                </div>
+
+                <!-- HORÁRIOS COMPACTOS -->
+                <div class="row g-2 mb-3">
+                  <div class="col-6">
+                    <label class="form-label small fw-semibold">Início</label>
+                    <div class="input-group input-group-sm">
+                      <span class="input-group-text bg-light"><i class="bi bi-clock"></i></span>
+                      <input type="time" class="form-control" [(ngModel)]="reserva.horaInicio" name="inicio" min="07:00" max="22:30" step="1800" required>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label small fw-semibold">Fim</label>
+                    <div class="input-group input-group-sm">
+                      <span class="input-group-text bg-light"><i class="bi bi-clock-history"></i></span>
+                      <input type="time" class="form-control" [(ngModel)]="reserva.horaFim" name="fim" min="07:30" max="23:00" step="1800" required>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- PAINEL VISUAL DE OCUPAÇÃO NA DATA (ESTILO CINEMA) -->
+                <div *ngIf="reserva.espacoId && reserva.dataUtilizacao" class="card bg-light border-0 p-3 mb-3">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <label class="form-label small fw-bold mb-0 text-dark">
+                      <i class="bi bi-calendar2-range text-primary me-1"></i>Ocupação Homologada nesta Data:
+                    </label>
+                    <span class="badge" [ngClass]="obterOcupacaoDia().length > 0 ? 'bg-warning text-dark' : 'bg-success'">
+                      {{ obterOcupacaoDia().length > 0 ? 'Com Reservas' : 'Livre o dia todo' }}
+                    </span>
+                  </div>
+
+                  <div *ngIf="obterOcupacaoDia().length === 0" class="text-success small fw-semibold">
+                    <i class="bi bi-check-circle-fill me-1"></i>Espaço totalmente livre nesta data.
+                  </div>
+
+                  <div *ngIf="obterOcupacaoDia().length > 0" class="d-flex flex-wrap gap-2 mt-1">
+                    <span *ngFor="let item of obterOcupacaoDia()" class="badge bg-danger shadow-sm py-2 px-2 fw-normal" [title]="'Solicitante: ' + item.solicitante">
+                      <i class="bi bi-lock-fill me-1"></i>{{ item.inicio }} às {{ item.fim }} (Ocupado)
+                    </span>
+                  </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 py-2" [disabled]="loading">
+                  <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+                  Enviar Pedido de Espaço
+                </button>
+              </form>
+            </div>
           </div>
-          <div class="card-body">
-            <form (ngSubmit)="enviarReservaEspaco()">
-              <div class="mb-3">
-                <label class="form-label small fw-semibold">Espaço Especial (Laboratórios & Auditórios)</label>
-                <select class="form-select" [(ngModel)]="reserva.espacoId" name="espacoId" required>
-                  <option [ngValue]="null">Selecione o espaço sob demanda...</option>
-                  <option *ngFor="let espaco of espacosReservaveis" [ngValue]="espaco.id">
-                    [{{ espaco.tipo }}] {{ espaco.sigla }} - {{ espaco.nome }} ({{ espaco.capacidadeMaxima }} lugares)
-                  </option>
-                </select>
-              </div>
+        </div>
 
-              <div class="mb-3">
-                <label class="form-label small fw-semibold">Data de Utilização</label>
-                <input type="date" class="form-control" [(ngModel)]="reserva.dataUtilizacao" name="data" required>
-              </div>
+        <!-- COLUNA DIREITA: TABELA DE ESPAÇOS HOMOLOGADOS COM STATUS DINÂMICO -->
+        <div class="col-lg-7">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-white fw-bold py-3">
+              <span class="text-primary"><i class="bi bi-card-checklist me-1"></i>Espaços Sob Demanda Homologados</span>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Nome</th>
+                      <th>Tipo</th>
+                      <th>Capacidade</th>
+                      <th class="text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let espaco of espacosReservaveis">
+                      <td class="fw-semibold">{{ espaco.nome }}</td>
+                      <td>
+                        <span class="badge" [ngClass]="espaco.tipo === 'LABORATORIO' ? 'bg-primary' : 'bg-info text-dark'">
+                          {{ espaco.tipo }}
+                        </span>
+                      </td>
+                      <td>{{ espaco.capacidadeMaxima }} lugares</td>
+                      <td class="text-center">
+                        <!-- Em Manutenção Física (RF 6.2) -->
+                        <span *ngIf="espaco.status === 'MANUTENCAO' || espaco.status === 'INATIVO'" class="badge bg-secondary">
+                          EM MANUTENÇÃO
+                        </span>
 
-              <div class="row">
-                <div class="col-6 mb-3">
-                  <label class="form-label small fw-semibold">Início</label>
-                  <input type="time" class="form-control" [(ngModel)]="reserva.horaInicio" name="inicio" required>
-                </div>
-                <div class="col-6 mb-3">
-                  <label class="form-label small fw-semibold">Fim</label>
-                  <input type="time" class="form-control" [(ngModel)]="reserva.horaFim" name="fim" required>
-                </div>
-              </div>
+                        <!-- Ocupação dinâmica na data selecionada no formulário -->
+                        <span *ngIf="reserva.dataUtilizacao && temReservaAprovadaNoDia(espaco.id, reserva.dataUtilizacao) && espaco.status !== 'MANUTENCAO' && espaco.status !== 'INATIVO'" class="badge bg-warning text-dark">
+                          RESERVAS NO DIA
+                        </span>
 
-              <button type="submit" class="btn btn-primary w-100 py-2" [disabled]="loading">
-                <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
-                Enviar Pedido de Espaço
-              </button>
-            </form>
+                        <!-- Livre -->
+                        <span *ngIf="(!reserva.dataUtilizacao || !temReservaAprovadaNoDia(espaco.id, reserva.dataUtilizacao)) && espaco.status !== 'MANUTENCAO' && espaco.status !== 'INATIVO'" class="badge bg-success">
+                          DISPONÍVEL
+                        </span>
+                      </td>
+                    </tr>
+                    <tr *ngIf="espacosReservaveis.length === 0">
+                      <td colspan="4" class="text-center text-muted py-4">Nenhum espaço homologado disponível.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-
-      <div class="col-lg-7">
-        <div class="card shadow-sm border-0">
-          <div class="card-header bg-white fw-bold py-3">
-            <span><i class="bi bi-card-checklist me-1 text-primary"></i>Espaços Sob Demanda Homologados</span>
-          </div>
-          <div class="card-body p-0">
-            <table class="table table-hover align-middle mb-0">
-              <thead class="table-light small">
-                <tr><th>Nome</th><th>Tipo</th><th>Capacidade</th><th>Status</th></tr>
-              </thead>
-              <tbody class="small">
-                <tr *ngFor="let e of espacosReservaveis">
-                  <td class="fw-semibold">{{ e.nome }}</td>
-                  <td><span class="badge" [ngClass]="e.tipo === 'LABORATORIO' ? 'bg-primary' : 'bg-info text-dark'">{{ e.tipo }}</span></td>
-                  <td>{{ e.capacidadeMaxima }} lugares</td>
-                  <td><span class="badge bg-success">{{ e.status || e.statusOperacional || 'DISPONIVEL' }}</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- ================= ABA 2: INSTALAÇÃO DE SOFTWARES ================= -->
     <div *ngIf="abaAtiva === 'SOFTWARE'" class="row">
@@ -273,6 +348,49 @@ export class SolicitarReservaComponent implements OnInit {
   laboratorios: any[] = [];
   softwaresCatalogo: any[] = [];
   minhasSolicitacoes: any[] = [];
+  todasSolicitacoes: any[] = [];
+
+  horariosDisponiveis: string[] = [
+    '07:00', '07:30', '08:00', '08:30', '09:00', '09:30',
+    '10:00', '10:30', '11:00', '11:30', '12:00', '12:30',
+    '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
+    '16:00', '16:30', '17:00', '17:30', '18:00', '18:30',
+    '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30'
+  ];
+
+  obterOcupacaoDia(): { inicio: string; fim: string; solicitante: string }[] {
+    if (!this.reserva.espacoId || !this.reserva.dataUtilizacao) {
+      return [];
+    }
+
+    const lista = this.todasSolicitacoes.length > 0 ? this.todasSolicitacoes : this.minhasSolicitacoes;
+
+    return lista
+      .filter((s: any) => {
+        const mesmoEspaco = Number(s.espacoId || s.espaco?.id) === Number(this.reserva.espacoId);
+        const mesmaData = s.dataUtilizacao === this.reserva.dataUtilizacao;
+        const aprovada = s.status === 'APROVADA' || s.status === 'RESERVADO';
+        return mesmoEspaco && mesmaData && aprovada;
+      })
+      .map((s: any) => ({
+        inicio: s.horaInicio || s.horarioInicio || '',
+        fim: s.horaFim || s.horarioFim || '',
+        solicitante: s.solicitanteNome || s.nomeSolicitante || 'Reservado'
+      }));
+  }
+
+  definirHorario(inicio: string, fim: string): void {
+    this.reserva.horaInicio = inicio;
+    this.reserva.horaFim = fim;
+  }
+
+  temReservaAprovadaNoDia(espacoId: number, data: string): boolean {
+    return this.todasSolicitacoes.some(s =>
+      Number(s.espacoId || s.espaco?.id) === Number(espacoId) &&
+      s.dataUtilizacao === data &&
+      (s.status === 'APROVADA' || s.status === 'RESERVADO')
+    );
+  }
 
   reserva = {
     espacoId: null as number | null,
@@ -324,11 +442,17 @@ export class SolicitarReservaComponent implements OnInit {
 
     this.http.get<any[]>('http://localhost:8080/api/solicitacoes-reservas').subscribe({
       next: (todas) => {
+        // Guarda todas as solicitações para calcular a grade de ocupação do dia (estilo cinema)
+        this.todasSolicitacoes = todas;
+
         // Filtra de forma dinâmica exclusivamente as solicitações do usuário autenticado
         this.minhasSolicitacoes = todas.filter(s =>
           (userId && (s.solicitanteId === userId || s.solicitante?.id === userId)) ||
           (userEmail && (s.solicitanteEmail === userEmail || s.solicitante?.email === userEmail))
         );
+      },
+      error: (err) => {
+        console.error('Erro ao carregar solicitações:', err);
       }
     });
   }
