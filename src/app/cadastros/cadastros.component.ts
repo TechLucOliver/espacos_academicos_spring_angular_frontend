@@ -619,10 +619,11 @@ import { AuthService } from '../core/services/auth.service';
         <div class="col-lg-4 mb-4">
           <div class="card shadow-sm border-0">
             <div class="card-header bg-white fw-bold py-3">
-              <i class="bi bi-cpu text-primary me-1"></i> Novo Laboratório de Informática (RF 6.1.2)
+              <i class="bi bi-cpu text-primary me-1"></i>
+              {{ editandoLabId ? 'Editar Laboratório de Informática' : 'Novo Laboratório de Informática (RF 6.1.2)' }}
             </div>
             <div class="card-body">
-              <form (ngSubmit)="salvarLaboratorio()">
+              <form (ngSubmit)="salvarLab()">
                 <div class="mb-2">
                   <label class="form-label small fw-semibold">Centro Académico Vinculado</label>
                   <select class="form-select" [(ngModel)]="formLab.centroAcademicoId" name="labCa" required>
@@ -658,9 +659,22 @@ import { AuthService } from '../core/services/auth.service';
                   <label class="form-label small fw-semibold">Descrição Complementar</label>
                   <textarea class="form-control" rows="2" [(ngModel)]="formLab.descricaoComplementar" name="descCompLab" placeholder="Ex: Bancadas com conexões Gigabit dedicadas"></textarea>
                 </div>
-                <button type="submit" class="btn btn-primary w-100" [disabled]="loading">
-                  <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span> Salvar Laboratório
+                <div class="d-flex gap-2">
+                <button type="submit"
+                        class="btn btn-primary flex-grow-1"
+                        [disabled]="loading">
+                  <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+                  <i class="bi" [ngClass]="editandoLabId ? 'bi-check2-circle' : 'bi-plus-circle'"></i>
+                  {{ editandoLabId ? ' Atualizar Laboratório' : ' Salvar Laboratório' }}
                 </button>
+
+                <button *ngIf="editandoLabId"
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        (click)="cancelarEdicaoLab()">
+                  Cancelar
+                </button>
+              </div>
               </form>
             </div>
           </div>
@@ -682,18 +696,74 @@ import { AuthService } from '../core/services/auth.service';
                     <th>Capacidade</th>
                     <th>Localização</th>
                     <th>Status</th>
+                    <th class="text-center" style="width: 100px;">Ações</th>
                   </tr>
                 </thead>
                 <tbody class="small">
-                  <tr *ngFor="let lab of listaLabs">
-                    <td><span class="badge bg-secondary">{{ lab.sigla }}</span></td>
-                    <td class="fw-semibold">{{ lab.nome }}</td>
-                    <td><small class="text-muted"><i class="bi bi-pc me-1"></i>{{ lab.tipoComputadores }}</small></td>
-                    <td>{{ lab.capacidadeMaxima }} lugares</td>
-                    <td>{{ lab.localizacao }}</td>
-                    <td><span class="badge bg-success">{{ lab.status || lab.statusOperacional || 'DISPONIVEL' }}</span></td>
-                  </tr>
-                </tbody>
+                    <tr *ngFor="let lab of listaLabs">
+                      <td><span class="badge bg-secondary">{{ lab.sigla || '-' }}</span></td>
+                      <td class="fw-semibold">{{ lab.nome }}</td>
+                      <td><small class="text-muted"><i class="bi bi-pc me-1"></i>{{ lab.tipoComputadores || '-' }}</small></td>
+                      <td>{{ lab.capacidadeMaxima }} postos</td>
+                      <td>{{ lab.localizacao || '-' }}</td>
+                      <td>
+                        <span class="badge"
+                              [ngClass]="{
+                                'bg-success': (lab.status === 'DISPONIVEL' || lab.statusOperacional === 'DISPONIVEL'),
+                                'bg-warning text-dark': (lab.status === 'INATIVO' || lab.statusOperacional === 'INATIVO'),
+                                'bg-secondary': (lab.status === 'INDISPONIVEL' || lab.statusOperacional === 'INDISPONIVEL')
+                              }">
+                          <i class="bi me-1"
+                            [ngClass]="{
+                              'bi-check-circle': (lab.status === 'DISPONIVEL' || lab.statusOperacional === 'DISPONIVEL'),
+                              'bi-cone-striped': (lab.status === 'INATIVO' || lab.statusOperacional === 'INATIVO'),
+                              'bi-calendar-check': (lab.status === 'INDISPONIVEL' || lab.statusOperacional === 'INDISPONIVEL')
+                            }"></i>
+                          {{ (lab.status === 'INATIVO' || lab.statusOperacional === 'INATIVO') ? 'MANUTENÇÃO' : ((lab.status === 'INDISPONIVEL' || lab.statusOperacional === 'INDISPONIVEL') ? 'RESERVADO' : 'DISPONÍVEL') }}
+                        </span>
+                      </td>
+                      <td class="text-center">
+                        <!-- Editar Laboratório -->
+                        <button type="button"
+                                class="btn btn-outline-primary btn-sm me-1 py-0 px-2"
+                                title="Editar Laboratório"
+                                (click)="editarLab(lab)">
+                          <i class="bi bi-pencil"></i>
+                        </button>
+
+                        <!-- Estado A: Disponível -> Colocar em Manutenção -->
+                        <button *ngIf="lab.status === 'DISPONIVEL' || lab.statusOperacional === 'DISPONIVEL'"
+                                type="button"
+                                class="btn btn-outline-warning btn-sm py-0 px-2"
+                                title="Colocar em Manutenção"
+                                (click)="alternarStatusLab(lab)">
+                          <i class="bi bi-tools"></i>
+                        </button>
+
+                        <!-- Estado B: Em Manutenção -> Liberar para Uso -->
+                        <button *ngIf="lab.status === 'INATIVO' || lab.statusOperacional === 'INATIVO'"
+                                type="button"
+                                class="btn btn-outline-success btn-sm py-0 px-2"
+                                title="Liberar da Manutenção"
+                                (click)="alternarStatusLab(lab)">
+                          <i class="bi bi-check2-circle"></i>
+                        </button>
+
+                        <!-- Estado C: Reservado -> Bloqueado -->
+                        <button *ngIf="lab.status === 'INDISPONIVEL' || lab.statusOperacional === 'INDISPONIVEL'"
+                                type="button"
+                                class="btn btn-outline-secondary btn-sm py-0 px-2"
+                                disabled
+                                title="Laboratório com reserva ativa">
+                          <i class="bi bi-lock-fill"></i>
+                        </button>
+                      </td>
+                    </tr>
+
+                    <tr *ngIf="listaLabs.length === 0">
+                      <td colspan="7" class="text-center text-muted py-3">Nenhum laboratório registado.</td>
+                    </tr>
+                  </tbody>
               </table>
             </div>
           </div>
@@ -1026,6 +1096,7 @@ export class CadastrosComponent implements OnInit {
   editandoCursoId: number | null = null;
   editandoUsuarioId: number | null = null;
   editandoEspacoId: number | null = null;
+  editandoLabId: number | null = null;
 
   formIes = {
     sigla: '',
@@ -1068,13 +1139,13 @@ export class CadastrosComponent implements OnInit {
   };
 
   formLab = {
-    centroAcademicoId: null as number | null,
     sigla: '',
     nome: '',
-    capacidadeMaxima: 35,
+    capacidadeMaxima: 0,
     localizacao: '',
     tipoComputadores: '',
-    descricaoComplementar: ''
+    descricaoComplementar: '',
+    centroAcademicoId: null as number | null
   };
 
   formUsuario = {
@@ -1523,12 +1594,7 @@ export class CadastrosComponent implements OnInit {
     });
   }
 
-  salvarLaboratorio(): void {
-    if (!this.formLab.centroAcademicoId) {
-      this.mensagemErro = 'Selecione o Centro Académico vinculado ao laboratório.';
-      return;
-    }
-
+  salvarLab(): void {
     this.loading = true;
     this.mensagemSucesso = '';
     this.mensagemErro = '';
@@ -1536,31 +1602,91 @@ export class CadastrosComponent implements OnInit {
     const payload = {
       sigla: this.formLab.sigla,
       nome: this.formLab.nome,
-      descricaoComplementar: this.formLab.descricaoComplementar,
       capacidadeMaxima: Number(this.formLab.capacidadeMaxima),
       localizacao: this.formLab.localizacao,
       tipoComputadores: this.formLab.tipoComputadores,
-      centroAcademicoId: Number(this.formLab.centroAcademicoId)
+      descricaoComplementar: this.formLab.descricaoComplementar,
+      centroAcademicoId: this.formLab.centroAcademicoId ? Number(this.formLab.centroAcademicoId) : null
     };
 
-    this.http.post(`${this.baseUrl}/laboratorios`, payload).subscribe({
+    const req$ = this.editandoLabId
+      ? this.http.put(`${this.baseUrl}/laboratorios/${this.editandoLabId}`, payload)
+      : this.http.post(`${this.baseUrl}/laboratorios`, payload);
+
+    req$.subscribe({
       next: () => {
         this.loading = false;
-        this.mensagemSucesso = 'Laboratório de Informática registado com sucesso!';
-        this.formLab = {
-          centroAcademicoId: null,
-          sigla: '',
-          nome: '',
-          capacidadeMaxima: 35,
-          localizacao: '',
-          tipoComputadores: '',
-          descricaoComplementar: ''
-        };
+        this.mensagemSucesso = this.editandoLabId
+          ? 'Laboratório atualizado com sucesso!'
+          : 'Laboratório registado com sucesso!';
+        this.cancelarEdicaoLab();
         this.carregarLaboratorios();
+        this.carregarLogs();
       },
       error: (err: any) => {
         this.loading = false;
-        this.mensagemErro = err.error?.message || err.error?.mensagem || 'Erro ao registar Laboratório.';
+        this.mensagemErro = err?.error?.message || err?.error?.mensagem || 'Erro ao processar Laboratório.';
+      }
+    });
+  }
+
+  editarLab(lab: any): void {
+    this.editandoLabId = lab.id;
+    this.formLab = {
+      sigla: lab.sigla || '',
+      nome: lab.nome || '',
+      capacidadeMaxima: lab.capacidadeMaxima || 0,
+      localizacao: lab.localizacao || '',
+      tipoComputadores: lab.tipoComputadores || '',
+      descricaoComplementar: lab.descricaoComplementar || '',
+      centroAcademicoId: lab.centroAcademicoId ? Number(lab.centroAcademicoId) : (lab.centroAcademico?.id ? Number(lab.centroAcademico.id) : null)
+    };
+    this.mensagemSucesso = '';
+    this.mensagemErro = '';
+  }
+
+  cancelarEdicaoLab(): void {
+    this.editandoLabId = null;
+    this.formLab = {
+      sigla: '',
+      nome: '',
+      capacidadeMaxima: 0,
+      localizacao: '',
+      tipoComputadores: '',
+      descricaoComplementar: '',
+      centroAcademicoId: null
+    };
+  }
+
+  alternarStatusLab(lab: any): void {
+    const statusAtual = lab.status || lab.statusOperacional;
+    const isDisponivel = statusAtual === 'DISPONIVEL' || statusAtual === 'ATIVO';
+    const rota = isDisponivel ? 'manutencao' : 'liberar';
+    const acaoTexto = isDisponivel ? 'colocar em manutenção' : 'liberar para uso';
+    const nomeLab = lab.nome || lab.sigla || `Laboratório #${lab.id}`;
+
+    const confirmacao = confirm(`Deseja realmente ${acaoTexto} o laboratório "${nomeLab}"?`);
+    if (!confirmacao) return;
+
+    this.loading = true;
+    this.mensagemSucesso = '';
+    this.mensagemErro = '';
+
+    // Dispara /api/laboratorios/{id}/manutencao ou /api/laboratorios/{id}/liberar
+    const endpoint = `${this.baseUrl}/laboratorios/${lab.id}/${rota}`;
+
+    this.http.patch(endpoint, {}).subscribe({
+      next: () => {
+        this.loading = false;
+        this.mensagemSucesso = isDisponivel
+          ? `Laboratório "${nomeLab}" colocado em manutenção!`
+          : `Laboratório "${nomeLab}" liberado com sucesso!`;
+        this.carregarLaboratorios();
+        this.carregarLogs();
+      },
+      error: (err: any) => {
+        this.loading = false;
+        this.mensagemErro = err?.error?.message || err?.error?.mensagem || `Erro ao ${acaoTexto} o laboratório.`;
       }
     });
   }
