@@ -922,88 +922,122 @@ import { AuthService } from '../core/services/auth.service';
 
       <!-- ABA 7: SOFTWARES & LICENÇAS -->
       <div *ngIf="abaAtiva === 'software'" class="row">
-        <div class="col-lg-4 mb-4">
-          <div class="card shadow-sm border-0">
-            <div class="card-header bg-white fw-bold py-3">
-              <i class="bi bi-plus-circle text-primary me-1"></i> Novo Software (RF 11)
-            </div>
-            <div class="card-body">
-              <form (ngSubmit)="salvarSoftware()">
-                <div class="mb-2">
-                  <label class="form-label small fw-semibold">Nome do Software / Pacote</label>
-                  <input type="text" class="form-control" [(ngModel)]="formSoftware.nome" name="nomeSw" placeholder="Ex: IntelliJ IDEA Ultimate, PostgreSQL" required>
-                </div>
-                <div class="mb-2">
-                  <label class="form-label small fw-semibold">Tipo de Licenciamento</label>
-                  <select class="form-select" [(ngModel)]="formSoftware.tipo" name="tipoSw" required>
-                    <option value="SOFTWARE_LIVRE">Software Livre / Código Aberto</option>
-                    <option value="PROPRIETARIO">Proprietário / Comercial</option>
-                  </select>
-                </div>
-                <div class="mb-2">
-                  <label class="form-label small fw-semibold">URL Oficial de Download</label>
-                  <input type="url" class="form-control" [(ngModel)]="formSoftware.urlDownload" name="urlSw" placeholder="https://www.jetbrains.com/idea/download" required>
-                </div>
-                <div class="mb-2">
-                  <label class="form-label small fw-semibold">Objetivo de Uso Pedagógico</label>
-                  <input type="text" class="form-control" [(ngModel)]="formSoftware.objetivoUso" name="objSw" placeholder="Ex: Ambiente de desenvolvimento para POO e Spring Boot" required>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label small fw-semibold">Disciplinas Vinculadas (Opcional)</label>
-                  <textarea class="form-control" rows="2" [(ngModel)]="formSoftware.disciplinasVinculadas" name="discSw" placeholder="Ex: Programação Orientada a Objetos, Sistemas Distribuídos"></textarea>
-                </div>
-                <button type="submit" class="btn btn-primary w-100" [disabled]="loading">
-                  <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span> Salvar Software
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
+          <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm border-0">
+              <div class="card-header bg-white fw-bold py-3">
+                <i class="bi bi-code-slash text-primary me-1"></i>
+                {{ editandoSoftwareId ? 'Editar Software' : 'Novo Software no Catálogo (RF 8)' }}
+              </div>
+              <div class="card-body">
+                <form (ngSubmit)="salvarSoftware()">
+                  <!-- Nome do Software -->
+                  <div class="mb-2">
+                    <label class="form-label small fw-semibold">Nome do Software / Pacote</label>
+                    <input type="text" class="form-control" [(ngModel)]="formSoftware.nome" name="softNome" placeholder="Ex: Docker Desktop, VS Code, MATLAB" required>
+                  </div>
 
-        <div class="col-lg-8">
-          <div class="card shadow-sm border-0">
-            <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center py-3">
-              <span><i class="bi bi-list-ul me-1"></i> Catálogo de Softwares Registados</span>
-              <button class="btn btn-sm btn-outline-secondary" (click)="carregarSoftwares()"><i class="bi bi-arrow-clockwise"></i></button>
+                  <!-- Tipo de Licenciamento -->
+                  <div class="mb-2">
+                    <label class="form-label small fw-semibold">Tipo de Licenciamento</label>
+                    <select class="form-select" [(ngModel)]="formSoftware.tipo" name="softTipo" required>
+                      <option value="SOFTWARE_LIVRE">Software Livre / Open Source</option>
+                      <option value="PROPRIETARIO">Proprietário / Comercial</option>
+                    </select>
+                  </div>
+
+                  <!-- URL de Download -->
+                  <div class="mb-2">
+                    <label class="form-label small fw-semibold">URL Oficial de Download / Instalador</label>
+                    <input type="url" class="form-control" [(ngModel)]="formSoftware.urlDownload" name="softUrl" placeholder="https://..." required>
+                  </div>
+
+                  <!-- Objetivo de Uso -->
+                  <div class="mb-2">
+                    <label class="form-label small fw-semibold">Objetivo de Uso Pedagógico</label>
+                    <textarea class="form-control" rows="2" [(ngModel)]="formSoftware.objetivoUso" name="softObjetivo" placeholder="Finalidade prática das aulas" required></textarea>
+                  </div>
+
+                  <!-- Disciplinas Vinculadas -->
+                  <div class="mb-3">
+                    <label class="form-label small fw-semibold">Disciplinas Vinculadas (Opcional)</label>
+                    <input type="text" class="form-control" [(ngModel)]="formSoftware.disciplinasVinculadas" name="softDisciplinas" placeholder="Ex: Banco de Dados, Redes de Computadores">
+                  </div>
+
+                  <!-- Botões de Submissão -->
+                  <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-grow-1" [disabled]="loading">
+                      <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+                      <i class="bi" [ngClass]="editandoSoftwareId ? 'bi-check2-circle' : 'bi-plus-circle'"></i>
+                      {{ editandoSoftwareId ? ' Atualizar Software' : ' Salvar Software' }}
+                    </button>
+
+                    <button *ngIf="editandoSoftwareId" type="button" class="btn btn-outline-secondary" (click)="cancelarEdicaoSoftware()">
+                      Cancelar
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
-            <div class="table-responsive">
-              <table class="table table-hover align-middle mb-0">
-                <thead class="table-light small">
-                  <tr>
-                    <th>Nome</th>
-                    <th>Licença</th>
-                    <th>Objetivo de Uso</th>
-                    <th>Download</th>
-                    <th>Disciplinas</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody class="small">
-                  <tr *ngFor="let s of listaSoftwares">
-                    <td class="fw-semibold">{{ s.nome }}</td>
-                    <td>
-                      <span class="badge" [ngClass]="s.tipo === 'SOFTWARE_LIVRE' ? 'bg-info text-dark' : 'bg-warning text-dark'">
-                        {{ s.tipo === 'SOFTWARE_LIVRE' ? 'Software Livre' : 'Proprietário' }}
-                      </span>
-                    </td>
-                    <td>{{ s.objetivoUso }}</td>
-                    <td>
-                      <a [href]="s.urlDownload" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-1 text-decoration-none" title="Download">
-                        <i class="bi bi-box-arrow-up-right"></i> Link
-                      </a>
-                    </td>
-                    <td><small class="text-muted">{{ s.disciplinasVinculadas || 'Geral' }}</small></td>
-                    <td><span class="badge bg-success">{{ s.status || 'ATIVO' }}</span></td>
-                  </tr>
-                  <tr *ngIf="listaSoftwares.length === 0">
-                    <td colspan="6" class="text-center text-muted py-3">Nenhum software registado no catálogo.</td>
-                  </tr>
-                </tbody>
-              </table>
+          </div>
+
+          <!-- TABELA DO CATÁLOGO DE SOFTWARES (COLUNA DIREITA) -->
+          <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+              <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center py-3">
+                <span><i class="bi bi-collection me-1"></i> Softwares Homologados</span>
+                <button class="btn btn-sm btn-outline-secondary" (click)="carregarSoftwares()">
+                  <i class="bi bi-arrow-clockwise"></i>
+                </button>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                  <thead class="table-light small">
+                    <tr>
+                      <th>Nome</th>
+                      <th>Tipo de Licença</th>
+                      <th>Objetivo</th>
+                      <th>Download</th>
+                      <th class="text-center" style="width: 80px;">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody class="small">
+                    <tr *ngFor="let s of listaSoftwares">
+                      <td class="fw-semibold">
+                        {{ s.nome }}
+                        <div *ngIf="s.disciplinasVinculadas" class="text-muted small" style="font-size: 0.75rem;">
+                          <i class="bi bi-book me-1"></i>{{ s.disciplinasVinculadas }}
+                        </div>
+                      </td>
+                      <td>
+                        <span class="badge" [ngClass]="s.tipo === 'SOFTWARE_LIVRE' ? 'bg-info text-dark' : 'bg-primary'">
+                          {{ s.tipo === 'SOFTWARE_LIVRE' ? 'Software Livre' : 'Proprietário' }}
+                        </span>
+                      </td>
+                      <td><small class="text-secondary">{{ s.objetivoUso }}</small></td>
+                      <td>
+                        <a [href]="s.urlDownload" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2 text-truncate" style="max-width: 140px;" title="Aceder à ligação oficial de transferência">
+                          <i class="bi bi-box-arrow-up-right me-1"></i>Link
+                        </a>
+                      </td>
+                      <td class="text-center">
+                        <button type="button"
+                                class="btn btn-outline-primary btn-sm py-0 px-2"
+                                title="Editar Software"
+                                (click)="editarSoftware(s)">
+                          <i class="bi bi-pencil"></i>
+                        </button>
+                      </td>
+                    </tr>
+
+                    <tr *ngIf="listaSoftwares?.length === 0">
+                      <td colspan="5" class="text-center text-muted py-3">Nenhum software registado no catálogo.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
-      </div>
             <!-- ================= ABA 8: LOGS DE AUDITORIA (RF 4) ================= -->
       <div *ngIf="abaAtiva === 'logs'" class="card shadow-sm border-0">
         <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
@@ -1097,6 +1131,7 @@ export class CadastrosComponent implements OnInit {
   editandoUsuarioId: number | null = null;
   editandoEspacoId: number | null = null;
   editandoLabId: number | null = null;
+  editandoSoftwareId: number | null = null;
 
   formIes = {
     sigla: '',
@@ -1840,26 +1875,60 @@ export class CadastrosComponent implements OnInit {
     this.mensagemSucesso = '';
     this.mensagemErro = '';
 
-    this.http.post(`${this.baseUrl}/softwares`, this.formSoftware).subscribe({
+    const payload = {
+      nome: this.formSoftware.nome,
+      urlDownload: this.formSoftware.urlDownload,
+      tipo: this.formSoftware.tipo,
+      objetivoUso: this.formSoftware.objetivoUso,
+      disciplinasVinculadas: this.formSoftware.disciplinasVinculadas || null
+    };
+
+    const req$ = this.editandoSoftwareId
+      ? this.http.put(`${this.baseUrl}/softwares/${this.editandoSoftwareId}`, payload)
+      : this.http.post(`${this.baseUrl}/softwares`, payload);
+
+    req$.subscribe({
       next: () => {
         this.loading = false;
-        this.mensagemSucesso = 'Software registado no catálogo com sucesso!';
-        this.formSoftware = {
-          nome: '',
-          urlDownload: '',
-          tipo: 'SOFTWARE_LIVRE',
-          objetivoUso: '',
-          disciplinasVinculadas: ''
-        };
+        this.mensagemSucesso = this.editandoSoftwareId
+          ? 'Software atualizado com sucesso!'
+          : 'Software registado com sucesso no catálogo!';
+        this.cancelarEdicaoSoftware();
         this.carregarSoftwares();
+        this.carregarLogs();
       },
       error: (err: any) => {
         this.loading = false;
-        this.mensagemErro = err.error?.message || err.error?.mensagem || 'Erro ao registar Software.';
+        this.mensagemErro = err?.error?.message || err?.error?.mensagem || 'Erro ao processar Software.';
       }
     });
   }
 
+  editarSoftware(software: any): void {
+    this.editandoSoftwareId = software.id;
+    this.formSoftware = {
+      nome: software.nome || '',
+      urlDownload: software.urlDownload || '',
+      tipo: software.tipo || 'SOFTWARE_LIVRE',
+      objetivoUso: software.objetivoUso || '',
+      disciplinasVinculadas: software.disciplinasVinculadas || ''
+    };
+    this.mensagemSucesso = '';
+    this.mensagemErro = '';
+  }
+
+  cancelarEdicaoSoftware(): void {
+    this.editandoSoftwareId = null;
+    this.formSoftware = {
+      nome: '',
+      urlDownload: '',
+      tipo: 'SOFTWARE_LIVRE',
+      objetivoUso: '',
+      disciplinasVinculadas: ''
+    };
+  }
+
+  // --- LOGS DE AUDITORIA ---
   carregarLogs(): void {
     this.http.get<any[]>(`${this.baseUrl}/logs`).subscribe({
       next: (res) => {
