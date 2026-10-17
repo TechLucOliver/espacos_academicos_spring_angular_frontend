@@ -459,6 +459,7 @@ import { AuthService } from '../core/services/auth.service';
                     <label class="form-label small fw-semibold">Tipo</label>
                     <select class="form-select" [(ngModel)]="formEspaco.tipo" name="tipoEspaco" required>
                       <option value="SALA">Sala de Aula</option>
+                      <option value="LABORATORIO">Laboratório</option>
                       <option value="AUDITORIO">Auditório</option>
                     </select>
                   </div>
@@ -481,9 +482,22 @@ import { AuthService } from '../core/services/auth.service';
                   <label class="form-label small fw-semibold">Descrição Complementar</label>
                   <textarea class="form-control" rows="2" [(ngModel)]="formEspaco.descricaoComplementar" name="descComp" placeholder="Ex: Climatizada com projetor HDMI"></textarea>
                 </div>
-                <button type="submit" class="btn btn-primary w-100" [disabled]="loading">
-                  <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span> Salvar Espaço Físico
-                </button>
+                <div class="d-flex gap-2">
+                  <button type="submit"
+                          class="btn btn-primary flex-grow-1"
+                          [disabled]="loading">
+                    <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+                    <i class="bi" [ngClass]="editandoEspacoId ? 'bi-check2-circle' : 'bi-plus-circle'"></i>
+                    {{ editandoEspacoId ? ' Atualizar Espaço' : ' Salvar Espaço Físico' }}
+                  </button>
+
+                  <button *ngIf="editandoEspacoId"
+                          type="button"
+                          class="btn btn-outline-secondary"
+                          (click)="cancelarEdicaoEspaco()">
+                    Cancelar
+                  </button>
+                </div>
               </form>
             </div>
           </div>
@@ -505,18 +519,95 @@ import { AuthService } from '../core/services/auth.service';
                     <th>Capacidade</th>
                     <th>Localização</th>
                     <th>Status</th>
+                    <th class="text-center" style="width: 100px;">Ações</th>
                   </tr>
                 </thead>
                 <tbody class="small">
-                  <tr *ngFor="let e of listaEspacos">
-                    <td><span class="badge bg-secondary">{{ e.sigla }}</span></td>
-                    <td class="fw-semibold">{{ e.nome }}</td>
-                    <td><span class="badge bg-light text-dark border">{{ e.tipo }}</span></td>
-                    <td>{{ e.capacidadeMaxima }} lugares</td>
-                    <td>{{ e.localizacao }}</td>
-                    <td><span class="badge bg-success">{{ e.status || e.statusOperacional || 'DISPONIVEL' }}</span></td>
-                  </tr>
-                </tbody>
+            <tr *ngFor="let e of listaEspacos">
+              <!-- 1. Sigla -->
+              <td>
+                <span class="badge bg-secondary">{{ e.sigla || '-' }}</span>
+              </td>
+
+              <!-- 2. Espaço (Nome) -->
+              <td class="fw-semibold">
+                {{ e.nome }}
+              </td>
+
+              <!-- 3. Tipo -->
+              <td>
+                <span class="badge bg-light text-dark border">{{ e.tipo }}</span>
+              </td>
+
+              <!-- 4. Capacidade -->
+              <td>
+                {{ e.capacidadeMaxima }} lugares
+              </td>
+
+              <!-- 5. Localização -->
+              <td>
+                {{ e.localizacao || '-' }}
+              </td>
+
+              <td>
+                <span class="badge"
+                      [ngClass]="{
+                        'bg-success': (e.status === 'DISPONIVEL' || e.statusOperacional === 'DISPONIVEL'),
+                        'bg-warning text-dark': (e.status === 'INATIVO' || e.statusOperacional === 'INATIVO'),
+                        'bg-secondary': (e.status === 'INDISPONIVEL' || e.statusOperacional === 'INDISPONIVEL')
+                      }">
+                  <i class="bi me-1"
+                     [ngClass]="{
+                       'bi-check-circle': (e.status === 'DISPONIVEL' || e.statusOperacional === 'DISPONIVEL'),
+                       'bi-cone-striped': (e.status === 'INATIVO' || e.statusOperacional === 'INATIVO'),
+                       'bi-calendar-check': (e.status === 'INDISPONIVEL' || e.statusOperacional === 'INDISPONIVEL')
+                     }"></i>
+                  {{ (e.status === 'INATIVO' || e.statusOperacional === 'INATIVO') ? 'MANUTENÇÃO' : ((e.status === 'INDISPONIVEL' || e.statusOperacional === 'INDISPONIVEL') ? 'RESERVADO' : 'DISPONÍVEL') }}
+                </span>
+              </td>
+
+              <!-- 7. Ações -->
+              <td class="text-center">
+                <!-- Editar Espaço -->
+                <button type="button"
+                        class="btn btn-outline-primary btn-sm me-1 py-0 px-2"
+                        title="Editar Espaço"
+                        (click)="editarEspaco(e)">
+                  <i class="bi bi-pencil"></i>
+                </button>
+
+                <!-- Estado A: Espaço Disponível -> Colocar em Manutenção -->
+                <button *ngIf="e.status === 'DISPONIVEL' || e.statusOperacional === 'DISPONIVEL'"
+                        type="button"
+                        class="btn btn-outline-warning btn-sm py-0 px-2"
+                        title="Colocar em Manutenção"
+                        (click)="alternarStatusEspaco(e)">
+                  <i class="bi bi-tools"></i>
+                </button>
+
+                <!-- Estado B: Espaço em Manutenção -> Liberar para Uso -->
+                <button *ngIf="e.status === 'INATIVO' || e.statusOperacional === 'INATIVO'"
+                        type="button"
+                        class="btn btn-outline-success btn-sm py-0 px-2"
+                        title="Liberar da Manutenção"
+                        (click)="alternarStatusEspaco(e)">
+                  <i class="bi bi-check2-circle"></i>
+                </button>
+
+                <!-- Estado C: Espaço Reservado/Ocupado -> Ação bloqueada -->
+                <button *ngIf="e.status === 'INDISPONIVEL' || e.statusOperacional === 'INDISPONIVEL'"
+                        type="button"
+                        class="btn btn-outline-secondary btn-sm py-0 px-2"
+                        disabled
+                        title="Espaço com reserva ativa (não pode sofrer manutenção direta)">
+                  <i class="bi bi-lock-fill"></i>
+                </button>
+              </td>
+
+            <tr *ngIf="listaEspacos.length === 0">
+              <td colspan="7" class="text-center text-muted py-3">Nenhum espaço físico registado.</td>
+            </tr>
+          </tbody>
               </table>
             </div>
           </div>
@@ -934,6 +1025,7 @@ export class CadastrosComponent implements OnInit {
   editandoCaId: number | null = null;
   editandoCursoId: number | null = null;
   editandoUsuarioId: number | null = null;
+  editandoEspacoId: number | null = null;
 
   formIes = {
     sigla: '',
@@ -1327,39 +1419,98 @@ export class CadastrosComponent implements OnInit {
   }
 
   salvarEspaco(): void {
-    if (!this.formEspaco.centroAcademicoId) {
-      this.mensagemErro = 'Selecione o Centro Académico vinculado ao espaço.';
-      return;
-    }
-
     this.loading = true;
     this.mensagemSucesso = '';
     this.mensagemErro = '';
 
     const payload = {
-      ...this.formEspaco,
+      centroAcademicoId: this.formEspaco.centroAcademicoId ? Number(this.formEspaco.centroAcademicoId) : null,
+      sigla: this.formEspaco.sigla,
+      nome: this.formEspaco.nome,
+      tipo: this.formEspaco.tipo,
       capacidadeMaxima: Number(this.formEspaco.capacidadeMaxima),
-      centroAcademicoId: Number(this.formEspaco.centroAcademicoId)
+      localizacao: this.formEspaco.localizacao,
+      descricaoComplementar: this.formEspaco.descricaoComplementar
     };
 
-    this.http.post(`${this.baseUrl}/espacos-academicos`, payload).subscribe({
+    const req$ = this.editandoEspacoId
+      ? this.http.put(`${this.baseUrl}/espacos-academicos/${this.editandoEspacoId}`, payload)
+      : this.http.post(`${this.baseUrl}/espacos-academicos`, payload);
+
+    req$.subscribe({
       next: () => {
         this.loading = false;
-        this.mensagemSucesso = 'Espaço Académico registado com sucesso!';
-        this.formEspaco = {
-          centroAcademicoId: null,
-          sigla: '',
-          nome: '',
-          tipo: 'SALA',
-          capacidadeMaxima: 40,
-          localizacao: '',
-          descricaoComplementar: ''
-        };
+        this.mensagemSucesso = this.editandoEspacoId
+          ? 'Espaço físico atualizado com sucesso!'
+          : 'Espaço físico registado com sucesso!';
+        this.cancelarEdicaoEspaco();
         this.carregarEspacos();
+        this.carregarLogs();
       },
       error: (err: any) => {
         this.loading = false;
-        this.mensagemErro = err.error?.message || err.error?.mensagem || 'Erro ao registar Espaço Académico.';
+        this.mensagemErro = err?.error?.message || err?.error?.mensagem || 'Erro ao processar Espaço Físico.';
+      }
+    });
+  }
+
+  editarEspaco(espaco: any): void {
+    this.editandoEspacoId = espaco.id;
+    this.formEspaco = {
+      centroAcademicoId: espaco.centroAcademicoId ? Number(espaco.centroAcademicoId) : (espaco.centroAcademico?.id ? Number(espaco.centroAcademico.id) : null),
+      sigla: espaco.sigla || '',
+      nome: espaco.nome || '',
+      tipo: espaco.tipo || espaco.tipoEspaco || 'SALA',
+      capacidadeMaxima: espaco.capacidadeMaxima || 0,
+      localizacao: espaco.localizacao || '',
+      descricaoComplementar: espaco.descricaoComplementar || ''
+    };
+    this.mensagemSucesso = '';
+    this.mensagemErro = '';
+  }
+
+  cancelarEdicaoEspaco(): void {
+    this.editandoEspacoId = null;
+    this.formEspaco = {
+      centroAcademicoId: null,
+      sigla: '',
+      nome: '',
+      tipo: 'SALA',
+      capacidadeMaxima: 0,
+      localizacao: '',
+      descricaoComplementar: ''
+    };
+  }
+
+  alternarStatusEspaco(espaco: any): void {
+    const statusAtual = espaco.status || espaco.statusOperacional;
+    const isDisponivel = statusAtual === 'DISPONIVEL' || statusAtual === 'ATIVO';
+    const rota = isDisponivel ? 'manutencao' : 'liberar';
+    const acaoTexto = isDisponivel ? 'colocar em manutenção' : 'liberar para uso';
+    const nomeEspaco = espaco.nome || espaco.sigla || `Espaço #${espaco.id}`;
+
+    const confirmacao = confirm(`Deseja realmente ${acaoTexto} o espaço "${nomeEspaco}"?`);
+    if (!confirmacao) return;
+
+    this.loading = true;
+    this.mensagemSucesso = '';
+    this.mensagemErro = '';
+
+    // Dispara /api/espacos-academicos/{id}/manutencao ou /api/espacos-academicos/{id}/liberar
+    const endpoint = `${this.baseUrl}/espacos-academicos/${espaco.id}/${rota}`;
+
+    this.http.patch(endpoint, {}).subscribe({
+      next: () => {
+        this.loading = false;
+        this.mensagemSucesso = isDisponivel
+          ? `Espaço "${nomeEspaco}" colocado em manutenção!`
+          : `Espaço "${nomeEspaco}" liberado com sucesso!`;
+        this.carregarEspacos();
+        this.carregarLogs();
+      },
+      error: (err: any) => {
+        this.loading = false;
+        this.mensagemErro = err?.error?.message || err?.error?.mensagem || `Erro ao ${acaoTexto} o espaço.`;
       }
     });
   }
