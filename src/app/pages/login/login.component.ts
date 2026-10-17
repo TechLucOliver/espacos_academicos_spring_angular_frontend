@@ -72,7 +72,15 @@ export class LoginComponent {
     this.authService.login({ login: this.login, senha: this.senha }).subscribe({
       next: () => {
         this.loading = false;
-        this.router.navigate(['/reservar']);
+
+        // Redirecionamento inteligente conforme o papel do utilizador:
+        if (this.authService.hasRole('ADMINISTRADOR')) {
+          this.router.navigate(['/cadastros']);
+        } else if (this.authService.hasRole('COLABORADOR')) {
+          this.router.navigate(['/gestao-solicitacoes']);
+        } else {
+          this.router.navigate(['/reservar']);
+        }
       },
       error: (err) => {
         this.loading = false;

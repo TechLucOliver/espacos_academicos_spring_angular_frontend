@@ -11,9 +11,38 @@ import { authGuard } from './core/guards/auth.guard';
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
-  { path: 'reservar', component: SolicitarReservaComponent, canActivate: [authGuard] },
-  { path: 'gestao-solicitacoes', component: GestaoSolicitacoesComponent, canActivate: [authGuard] },
-  { path: 'relatorios', component: RelatoriosComponent, canActivate: [authGuard] },
-  { path: 'cadastros', component: CadastrosComponent, canActivate: [authGuard] },
+
+  // Apenas Docentes/Usuários e Administradores solicitam reserva
+  {
+    path: 'reservar',
+    component: SolicitarReservaComponent,
+    canActivate: [authGuard],
+    data: { roles: ['USUARIO', 'ADMINISTRADOR'] }
+  },
+
+  // Apenas Coordenadores (Colaboradores) e Administradores aprovam
+  {
+    path: 'gestao-solicitacoes',
+    component: GestaoSolicitacoesComponent,
+    canActivate: [authGuard],
+    data: { roles: ['COLABORADOR', 'ADMINISTRADOR'] }
+  },
+
+  // Todos os perfis autenticados têm acesso a relatórios (com filtros internos)
+  {
+    path: 'relatorios',
+    component: RelatoriosComponent,
+    canActivate: [authGuard],
+    data: { roles: ['USUARIO', 'COLABORADOR', 'ADMINISTRADOR'] }
+  },
+
+  // Apenas Administradores gerenciam a estrutura acadêmica e cadastros
+  {
+    path: 'cadastros',
+    component: CadastrosComponent,
+    canActivate: [authGuard],
+    data: { roles: ['ADMINISTRADOR'] }
+  },
+
   { path: '**', redirectTo: 'login' }
 ];

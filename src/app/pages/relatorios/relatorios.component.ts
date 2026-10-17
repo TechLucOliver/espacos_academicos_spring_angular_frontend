@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-relatorios',
@@ -30,23 +31,29 @@ import { HttpClient } from '@angular/common/http';
       </div>
 
       <!-- Abas de Navegação (ocultas na impressão) -->
-      <ul class="nav nav-pills mb-4 border-bottom pb-2 d-print-none">
-        <li class="nav-item">
-          <button class="nav-link" [class.active]="abaAtiva === 'estrutural'" (click)="trocarAba('estrutural')">
-            <i class="bi bi-diagram-3 me-1"></i> Estrutural (IES, CAs e Cursos)
-          </button>
-        </li>
-        <li class="nav-item">
-          <button class="nav-link" [class.active]="abaAtiva === 'docentes'" (click)="trocarAba('docentes')">
-            <i class="bi bi-people me-1"></i> Corpo Docente & CAs
-          </button>
-        </li>
-        <li class="nav-item">
-          <button class="nav-link" [class.active]="abaAtiva === 'espacos'" (click)="trocarAba('espacos')">
-            <i class="bi bi-clock-history me-1"></i> Espaços & Movimentação
-          </button>
-        </li>
-      </ul>
+      <!-- Abas de Navegação (ocultas na impressão) -->
+    <ul class="nav nav-pills mb-4 border-bottom pb-2 d-print-none">
+      <!-- Exclusivo ADMINISTRADOR (RF 5.1) -->
+      <li class="nav-item" *ngIf="isAdmin">
+        <button class="nav-link" [class.active]="abaAtiva === 'estrutural'" (click)="trocarAba('estrutural')">
+          <i class="bi bi-diagram-3 me-1"></i> Estrutural (IES, CAs e Cursos)
+        </button>
+      </li>
+
+      <!-- Exclusivo ADMINISTRADOR (RF 5.2) -->
+      <li class="nav-item" *ngIf="isAdmin">
+        <button class="nav-link" [class.active]="abaAtiva === 'docentes'" (click)="trocarAba('docentes')">
+          <i class="bi bi-people me-1"></i> Corpo Docente & CAs
+        </button>
+      </li>
+
+      <!-- Permitido para todos os perfis (RF 9.1 / RF 12.1) -->
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="abaAtiva === 'espacos'" (click)="trocarAba('espacos')">
+          <i class="bi bi-clock-history me-1"></i> Espaços & Movimentação
+        </button>
+      </li>
+    </ul>
 
       <!-- Bloco Timbrado Oficial de Emissão -->
       <div class="card border mb-4 documento-oficial-card">
@@ -319,22 +326,40 @@ import { HttpClient } from '@angular/common/http';
 })
 export class RelatoriosComponent implements OnInit {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
   private baseUrl = 'http://localhost:8080/api/relatorios';
 
-  abaAtiva: 'estrutural' | 'docentes' | 'espacos' = 'estrutural';
+  isAdmin = false;
+  abaAtiva: 'estrutural' | 'docentes' | 'espacos' = 'espacos';
   modoJson: boolean = false;
   dadosAtuais: any = null;
 
   ngOnInit(): void {
+    // 1. Identifica se o utilizador logado possui perfil de ADMINISTRADOR
+    this.isAdmin = this.auth.hasRole('ADMINISTRADOR');
+
+    // 2. Se for admin, inicia no estrutural; se for coordenador/docente, inicia em espaços
+    this.abaAtiva = this.isAdmin ? 'estrutural' : 'espacos';
+
+    // 3. Dispara a busca apenas para o relatório permitido
     this.carregarRelatorio(this.abaAtiva);
   }
 
   trocarAba(aba: 'estrutural' | 'docentes' | 'espacos'): void {
+    // Bloqueia qualquer tentativa indevida de troca para abas restritas
+    if ((aba === 'estrutural' || aba === 'docentes') && !this.isAdmin) {
+      return;
+    }
     this.abaAtiva = aba;
     this.carregarRelatorio(aba);
   }
 
   carregarRelatorio(tipo: string): void {
+    // Garante que requisições restritas jamais sejam disparadas por perfis comuns
+    if ((tipo === 'estrutural' || tipo === 'docentes') && !this.isAdmin) {
+      return;
+    }
+
     let endpoint = `${this.baseUrl}/estrutural`;
     if (tipo === 'docentes') endpoint = `${this.baseUrl}/docentes`;
     if (tipo === 'espacos') endpoint = `${this.baseUrl}/espacos-solicitacoes`;
@@ -373,13 +398,13 @@ export class RelatoriosComponent implements OnInit {
   formatarPerfis(perfilRaw: any): string {
     if (!perfilRaw) return 'Docente / Utilizador';
     if (Array.isArray(perfilRaw)) return perfilRaw.join(', ');
-    return String(perfilRaw).replace(/[\[\]"]/g, '').split(',').map(p => p.trim()).join(', ');
+    return String(perfilRaw).replace(/[\[\]]/g, '').split(',').map(p => p.trim()).join(', ');
   }
 
   normalizarArray(item: any): string[] {
     if (Array.isArray(item)) return item;
     if (typeof item === 'string') {
-      return item.replace(/[\[\]"]/g, '').split(',').map(s => s.trim()).filter(s => s.length > 0);
+      return item.replace(/[\[\]]/g, '').split(',').map(s => s.trim()).filter(s => s.length > 0);
     }
     return [];
   }
