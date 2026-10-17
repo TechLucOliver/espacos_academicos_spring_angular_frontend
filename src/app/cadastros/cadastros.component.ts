@@ -300,7 +300,7 @@ import { AuthService } from '../core/services/auth.service';
                       <button class="btn btn-sm py-0 px-2"
                               [ngClass]="ca.status === 'ATIVO' ? 'btn-outline-danger' : 'btn-outline-success'"
                               [title]="ca.status === 'ATIVO' ? 'Inativar CA' : 'Ativar CA'"
-                              (click)="alternarStatusCurso(ca)">
+                              (click)="alternarStatusCa(ca)">
                         <i class="bi" [ngClass]="ca.status === 'ATIVO' ? 'bi-slash-circle' : 'bi-arrow-counterclockwise'"></i>
                       </button>
                     </td>
@@ -1143,27 +1143,17 @@ export class CadastrosComponent implements OnInit {
     this.mensagemErro = '';
   }
 
-  cancelarEdicaoCa(): void {
-    this.editandoCaId = null;
-    this.formCentro = {
-      iesId: null,
-      nome: '',
-      emailCentral: '',
-      telefoneCentral: '',
-      nomeCoordenador: ''
-    };
-  }
-
-  alternarStatusCurso(ca: any): void {
+  alternarStatusCa(ca: any): void {
     const inativando = ca.status === 'ATIVO';
     const acao = inativando ? 'inativar' : 'reativar';
-    const confirmacao = confirm(`Deseja realmente ${acao} o CA "${ca.nome}"?`);
+    const confirmacao = confirm(`Deseja realmente ${acao} o Centro Académico "${ca.nome}"?`);
     if (!confirmacao) return;
 
     this.loading = true;
     this.mensagemSucesso = '';
     this.mensagemErro = '';
 
+    // Rota explícita de Centros Académicos
     const endpoint = `${this.baseUrl}/centros-academicos/${ca.id}/${acao}`;
 
     this.http.patch(endpoint, {}).subscribe({
@@ -1175,9 +1165,20 @@ export class CadastrosComponent implements OnInit {
       },
       error: (err: any) => {
         this.loading = false;
-        this.mensagemErro = err?.error?.message || `Erro ao ${acao} o Centro Académico.`;
+        this.mensagemErro = err?.error?.message || err?.error?.mensagem || `Erro ao ${acao} o Centro Académico.`;
       }
     });
+  }
+
+  cancelarEdicaoCa(): void {
+    this.editandoCaId = null;
+    this.formCentro = {
+      iesId: null,
+      nome: '',
+      emailCentral: '',
+      telefoneCentral: '',
+      nomeCoordenador: ''
+    };
   }
 
   // --- CURSOS ---
@@ -1210,6 +1211,34 @@ export class CadastrosComponent implements OnInit {
       turno: '',
       nomeCoordenador: ''
     };
+  }
+
+  alternarStatusCurso(curso: any): void {
+    const inativando = curso.status === 'ATIVO';
+    const acao = inativando ? 'inativar' : 'reativar';
+    const nomeCurso = curso.descricao || curso.nome || curso.sigla || 'Curso';
+    const confirmacao = confirm(`Deseja realmente ${acao} o curso "${nomeCurso}"?`);
+    if (!confirmacao) return;
+
+    this.loading = true;
+    this.mensagemSucesso = '';
+    this.mensagemErro = '';
+
+    // Rota explícita de cursos
+    const endpoint = `${this.baseUrl}/cursos/${curso.id}/${acao}`;
+
+    this.http.patch(endpoint, {}).subscribe({
+      next: () => {
+        this.loading = false;
+        this.mensagemSucesso = `Curso "${nomeCurso}" ${inativando ? 'inativado' : 'reativado'} com sucesso!`;
+        this.carregarCursos(); // Atualiza a tabela de Cursos
+        this.carregarLogs();
+      },
+      error: (err: any) => {
+        this.loading = false;
+        this.mensagemErro = err?.error?.message || `Erro ao ${acao} o Curso.`;
+      }
+    });
   }
 
   salvarCurso(): void {
