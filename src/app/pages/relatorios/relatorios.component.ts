@@ -31,9 +31,8 @@ import { AuthService } from '../../core/services/auth.service';
       </div>
 
       <!-- Abas de Navegação (ocultas na impressão) -->
-      <!-- Abas de Navegação (ocultas na impressão) -->
     <ul class="nav nav-pills mb-4 border-bottom pb-2 d-print-none">
-      <!-- Exclusivo ADMINISTRADOR (RF 5.1) -->
+      <!-- Exclusivo ADMINISTRADOR -->
       <li class="nav-item" *ngIf="isAdmin">
         <button class="nav-link" [class.active]="abaAtiva === 'estrutural'" (click)="trocarAba('estrutural')">
           <i class="bi bi-diagram-3 me-1"></i> Estrutural (IES, CAs e Cursos)

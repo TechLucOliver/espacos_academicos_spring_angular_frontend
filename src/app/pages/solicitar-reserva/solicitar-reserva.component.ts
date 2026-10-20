@@ -13,17 +13,17 @@ import { AuthService } from '../../core/services/auth.service';
     <ul class="nav nav-pills mb-4 border-bottom pb-3">
       <li class="nav-item">
         <button class="nav-link" [class.active]="abaAtiva === 'ESPACO'" (click)="trocarAba('ESPACO')">
-          <i class="bi bi-door-open me-1"></i> Reserva de Espaço (RF 10)
+          <i class="bi bi-door-open me-1"></i> Reserva de Espaço
         </button>
       </li>
       <li class="nav-item">
         <button class="nav-link" [class.active]="abaAtiva === 'SOFTWARE'" (click)="trocarAba('SOFTWARE')">
-          <i class="bi bi-cpu me-1"></i> Instalação de Software (RF 11)
+          <i class="bi bi-cpu me-1"></i> Instalação de Software
         </button>
       </li>
       <li class="nav-item">
         <button class="nav-link" [class.active]="abaAtiva === 'MEUS_PEDIDOS'" (click)="trocarAba('MEUS_PEDIDOS')">
-          <i class="bi bi-card-checklist me-1"></i> Minhas Solicitações & Uso (RF 10 & 10.4)
+          <i class="bi bi-card-checklist me-1"></i> Minhas Solicitações & Uso
           <span *ngIf="minhasReservasPendentes > 0" class="badge bg-danger ms-1">{{ minhasReservasPendentes }}</span>
         </button>
       </li>
@@ -304,19 +304,19 @@ import { AuthService } from '../../core/services/auth.service';
                   </span>
                 </td>
                 <td class="text-end">
-                  <!-- SE PENDENTE: Pode cancelar / inativar a solicitação (RF 10) -->
+                  <!-- SE PENDENTE: Pode cancelar / inativar a solicitação -->
                   <button *ngIf="s.status === 'PENDENTE'"
                           class="btn btn-outline-danger btn-sm"
                           (click)="cancelarMinhaSolicitacao(s.id)"
-                          title="Cancelar e inativar pedido de reserva (RF 10)">
+                          title="Cancelar e inativar pedido de reserva">
                     <i class="bi bi-trash me-1"></i> Cancelar
                   </button>
 
-                  <!-- SE APROVADA: Pode liberar o espaço após uso (RF 10.4) -->
+                  <!-- SE APROVADA: Pode liberar o espaço após uso -->
                   <button *ngIf="s.status === 'APROVADA'"
                           class="btn btn-success btn-sm"
                           (click)="liberarMeuEspaco(s.id)"
-                          title="Confirmar término do uso e liberar o espaço para o campus (RF 10.4)">
+                          title="Confirmar término do uso e liberar o espaço para o campus">
                     <i class="bi bi-box-arrow-down-left me-1"></i> Liberar Espaço
                   </button>
 
@@ -426,7 +426,7 @@ export class SolicitarReservaComponent implements OnInit {
   carregarDados() {
     this.http.get<any[]>('http://localhost:8080/api/espacos-academicos').subscribe({
       next: (data) => {
-        this.espacosReservaveis = data.filter(e => e.tipo === 'LABORATORIO' || e.tipo === 'AUDITORIO');
+        this.espacosReservaveis = data.filter(e => e.tipo === 'LABORATORIO' || e.tipo === 'AUDITORIO' || e.tipo === 'SALA');
         this.laboratorios = data.filter(e => e.tipo === 'LABORATORIO');
       }
     });
@@ -442,7 +442,7 @@ export class SolicitarReservaComponent implements OnInit {
 
     this.http.get<any[]>('http://localhost:8080/api/solicitacoes-reservas').subscribe({
       next: (todas) => {
-        // Guarda todas as solicitações para calcular a grade de ocupação do dia (estilo cinema)
+        // Guarda todas as solicitações para calcular a grade de ocupação do dia
         this.todasSolicitacoes = todas;
 
         // Filtra de forma dinâmica exclusivamente as solicitações do usuário autenticado
@@ -506,7 +506,7 @@ export class SolicitarReservaComponent implements OnInit {
     this.http.post('http://localhost:8080/api/solicitacoes-softwares', payload).subscribe({
       next: () => {
         this.loading = false;
-        this.exibirAlerta('Solicitação de instalação enviada com sucesso (RF 11)!', true);
+        this.exibirAlerta('Solicitação de instalação enviada com sucesso!', true);
         this.softwareForm.laboratorioId = null;
         this.softwareForm.softwareId = null;
         this.softwareForm.disciplina = '';
@@ -523,7 +523,7 @@ export class SolicitarReservaComponent implements OnInit {
   liberarMeuEspaco(id: number) {
     this.http.patch(`http://localhost:8080/api/solicitacoes-reservas/${id}/finalizar`, {}).subscribe({
       next: () => {
-        this.exibirAlerta('Uso finalizado e espaço desocupado com sucesso! Status retornado para DISPONÍVEL (RF 10.4).', true);
+        this.exibirAlerta('Uso finalizado e espaço desocupado com sucesso! Status retornado para DISPONÍVEL.', true);
         this.carregarMinhasSolicitacoes();
       },
       error: (err) => this.exibirAlerta(err.error?.message || 'Erro ao liberar espaço.', false)
@@ -531,7 +531,7 @@ export class SolicitarReservaComponent implements OnInit {
   }
 
   cancelarMinhaSolicitacao(id: number) {
-    if (!confirm('Deseja realmente cancelar esta solicitação pendente (RF 10)?')) return;
+    if (!confirm('Deseja realmente cancelar esta solicitação pendente?')) return;
 
     // Dispara a exclusão/inativação no backend
     this.http.delete(`http://localhost:8080/api/solicitacoes-reservas/${id}`).subscribe({

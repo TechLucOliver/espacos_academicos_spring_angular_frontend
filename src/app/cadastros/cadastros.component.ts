@@ -51,7 +51,7 @@ import { AuthService } from '../core/services/auth.service';
           <button class="nav-link"
               [class.active]="abaAtiva === 'logs'"
               (click)="abaAtiva = 'logs'; carregarLogs()">
-            <i class="bi bi-journal-text me-1"></i> 8. Logs de Auditoria (RF 4)
+            <i class="bi bi-journal-text me-1"></i> 8. Logs de Auditoria
           </button>
         </li>
 
@@ -99,7 +99,7 @@ import { AuthService } from '../core/services/auth.service';
 
                 <div class="border rounded p-2 bg-light mb-3">
                   <div class="fw-semibold small mb-2 text-secondary">
-                    <i class="bi bi-diagram-2 me-1"></i> Pró-Reitorias & Nomeações (RF 2.1.1)
+                    <i class="bi bi-diagram-2 me-1"></i> Pró-Reitorias & Nomeações
                   </div>
                   <div class="mb-2">
                     <input type="text" class="form-control form-control-sm" [(ngModel)]="novaProReitoria.nome" name="prNome" placeholder="Ex: Pró-Reitoria Acadêmica">
@@ -175,14 +175,14 @@ import { AuthService } from '../core/services/auth.service';
                       </span>
                     </td>
                     <td class="text-center">
-                      <!-- Botão Editar (RF 2.1) -->
+                      <!-- Botão Editar -->
                       <button class="btn btn-outline-primary btn-sm me-1 py-0 px-2"
                               title="Editar IES"
                               (click)="editarIes(ies)">
                         <i class="bi bi-pencil"></i>
                       </button>
 
-                      <!-- Botão Inativar / Ativar (RF 2.1.2) -->
+                      <!-- Botão Inativar / Ativar -->
                       <button class="btn btn-sm py-0 px-2"
                               [ngClass]="ies.status === 'ATIVO' ? 'btn-outline-danger' : 'btn-outline-success'"
                               [title]="ies.status === 'ATIVO' ? 'Inativar IES' : 'Ativar IES'"
@@ -206,7 +206,7 @@ import { AuthService } from '../core/services/auth.service';
         <div class="col-lg-4 mb-4">
           <div class="card shadow-sm border-0">
             <div class="card-header bg-white fw-bold py-3">
-              <i class="bi bi-plus-circle text-primary me-1"></i> Novo Centro Académico (CA)
+              <i class="bi bi-plus-circle text-primary me-1"></i> Novo Centro Académico
             </div>
             <div class="card-body">
               <form (ngSubmit)="salvarCentro()">
@@ -320,7 +320,7 @@ import { AuthService } from '../core/services/auth.service';
         <div class="col-lg-4 mb-4">
           <div class="card shadow-sm border-0">
             <div class="card-header bg-white fw-bold py-3">
-              <i class="bi bi-plus-circle text-primary me-1"></i> Novo Curso (RF 2.3)
+              <i class="bi bi-plus-circle text-primary me-1"></i> Novo Curso
             </div>
             <div class="card-body">
               <form (ngSubmit)="salvarCurso()">
@@ -437,7 +437,7 @@ import { AuthService } from '../core/services/auth.service';
         <div class="col-lg-4 mb-4">
           <div class="card shadow-sm border-0">
             <div class="card-header bg-white fw-bold py-3">
-              <i class="bi bi-plus-circle text-primary me-1"></i> Novo Espaço Físico (RF 6.1)
+              <i class="bi bi-plus-circle text-primary me-1"></i> Novo Espaço Físico
             </div>
             <div class="card-body">
               <form (ngSubmit)="salvarEspaco()">
@@ -620,7 +620,7 @@ import { AuthService } from '../core/services/auth.service';
           <div class="card shadow-sm border-0">
             <div class="card-header bg-white fw-bold py-3">
               <i class="bi bi-cpu text-primary me-1"></i>
-              {{ editandoLabId ? 'Editar Laboratório de Informática' : 'Novo Laboratório de Informática (RF 6.1.2)' }}
+              {{ editandoLabId ? 'Editar Laboratório de Informática' : 'Novo Laboratório de Informática' }}
             </div>
             <div class="card-body">
               <form (ngSubmit)="salvarLab()">
@@ -775,7 +775,7 @@ import { AuthService } from '../core/services/auth.service';
         <div class="col-lg-4 mb-4">
           <div class="card shadow-sm border-0">
             <div class="card-header bg-white fw-bold py-3">
-              <i class="bi bi-person-plus text-primary me-1"></i> Novo Utilizador / Docente (RF 3)
+              <i class="bi bi-person-plus text-primary me-1"></i> Novo Utilizador / Docente
             </div>
             <div class="card-body">
               <form (ngSubmit)="salvarUsuario()">
@@ -926,7 +926,7 @@ import { AuthService } from '../core/services/auth.service';
             <div class="card shadow-sm border-0">
               <div class="card-header bg-white fw-bold py-3">
                 <i class="bi bi-code-slash text-primary me-1"></i>
-                {{ editandoSoftwareId ? 'Editar Software' : 'Novo Software no Catálogo (RF 8)' }}
+                {{ editandoSoftwareId ? 'Editar Software' : 'Novo Software no Catálogo' }}
               </div>
               <div class="card-body">
                 <form (ngSubmit)="salvarSoftware()">
@@ -1038,12 +1038,12 @@ import { AuthService } from '../core/services/auth.service';
             </div>
           </div>
         </div>
-            <!-- ================= ABA 8: LOGS DE AUDITORIA (RF 4) ================= -->
+      <!-- ABA 8: LOGS DE AUDITORIA -->
       <div *ngIf="abaAtiva === 'logs'" class="card shadow-sm border-0">
         <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
           <span>
             <i class="bi bi-shield-check me-1 text-primary"></i>
-            Monitorização de Logs de Auditoria e Rastreabilidade (RF 4)
+            Monitorização de Logs de Auditoria e Rastreabilidade
           </span>
           <button class="btn btn-outline-primary btn-sm" (click)="carregarLogs()">
             <i class="bi bi-arrow-clockwise me-1"></i> Atualizar

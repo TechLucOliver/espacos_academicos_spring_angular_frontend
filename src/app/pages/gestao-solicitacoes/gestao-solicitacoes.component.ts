@@ -19,7 +19,7 @@ import { AuthService } from '../../core/services/auth.service';
           </li>
           <li class="nav-item">
             <button class="nav-link fw-bold" [class.active]="abaAtiva === 'SOFTWARES'" (click)="trocarAba('SOFTWARES')">
-              <i class="bi bi-cpu me-1 text-primary"></i> Moderação de Softwares (RF 8)
+              <i class="bi bi-cpu me-1 text-primary"></i> Moderação de Softwares
             </button>
           </li>
         </ul>
@@ -117,10 +117,10 @@ import { AuthService } from '../../core/services/auth.service';
                 </td>
                 <td class="text-end">
                   <div class="btn-group btn-group-sm" *ngIf="sw.status === 'PENDENTE' && (auth.hasRole('ADMINISTRADOR') || (!isMinhaSolicitacao(sw) && auth.hasRole('COLABORADOR')))">
-                    <button class="btn btn-success" (click)="aprovarSoftware(sw.id)" title="Aprovar Instalação (RF 8.1)">
+                    <button class="btn btn-success" (click)="aprovarSoftware(sw.id)" title="Aprovar Instalação">
                       <i class="bi bi-check-lg"></i> Aprovar
                     </button>
-                    <button class="btn btn-danger" (click)="reprovarSoftware(sw.id)" title="Reprovar com Justificativa (RF 8.2)">
+                    <button class="btn btn-danger" (click)="reprovarSoftware(sw.id)" title="Reprovar com Justificativa">
                       <i class="bi bi-x-lg"></i> Reprovar
                     </button>
                   </div>
@@ -215,7 +215,7 @@ export class GestaoSolicitacoesComponent implements OnInit {
   finalizarUsoEspaco(id: number) {
     this.http.patch(`http://localhost:8080/api/solicitacoes-reservas/${id}/finalizar`, {}).subscribe({
       next: () => {
-        this.exibirAlerta('Uso finalizado! O espaço retornou para DISPONÍVEL (RF 10.4).', true);
+        this.exibirAlerta('Uso finalizado! O espaço retornou para DISPONÍVEL.', true);
         this.carregarSolicitacoes();
       },
       error: (err) => this.exibirAlerta(err.error?.message || 'Erro ao finalizar uso.', false)
@@ -226,7 +226,7 @@ export class GestaoSolicitacoesComponent implements OnInit {
     const avaliadorId = this.auth.getUserId();
     this.http.patch(`http://localhost:8080/api/solicitacoes-softwares/${id}/aprovar?avaliadorId=${avaliadorId}`, {}).subscribe({
       next: () => {
-        this.exibirAlerta('Instalação de software aprovada com sucesso (RF 8.1)!', true);
+        this.exibirAlerta('Instalação de software aprovada com sucesso!', true);
         this.carregarSolicitacoes();
       },
       error: (err) => this.exibirAlerta(err.error?.message || 'Erro ao aprovar instalação de software.', false)
@@ -234,7 +234,7 @@ export class GestaoSolicitacoesComponent implements OnInit {
   }
 
   reprovarSoftware(id: number) {
-    const motivo = prompt('Informe a justificativa técnica para a reprovação da instalação (RF 8.2):');
+    const motivo = prompt('Informe a justificativa técnica para a reprovação da instalação:');
     if (!motivo) return;
 
     const avaliadorId = this.auth.getUserId();
